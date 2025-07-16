@@ -1,0 +1,25 @@
+digraph Pipeline {
+  rankdir=TB;
+  node [fontsize=12 fontname="Helvetica"];
+  "Taille palette" [shape=box, label=< <B>Taille palette</B><BR/><FONT POINT-SIZE="10">integer</FONT> >];
+  "Extract palette" [shape=box, label=< <B>Extract palette</B><BR/><FONT POINT-SIZE="10">image_analysis.image_processing.extract_palette</FONT> >];
+  "Palette indices" [shape=box, label=< <B>Palette indices</B><BR/><FONT POINT-SIZE="10">ith_subset</FONT> >];
+  "Recolor" [shape=box, label=< <B>Recolor</B><BR/><FONT POINT-SIZE="10">image_analysis.image_processing.recolor</FONT> >];
+  "Remove palette" [shape=box, label=< <B>Remove palette</B><BR/><FONT POINT-SIZE="10">image_analysis.image_processing.remove_palette</FONT> >];
+  "To mask" [shape=box, label=< <B>To mask</B><BR/><FONT POINT-SIZE="10">to_mask</FONT> >];
+  "Isolate" [shape=box, label=< <B>Isolate</B><BR/><FONT POINT-SIZE="10">image_analysis.image_processing.isolate</FONT> >];
+  "Main element" [shape=box, label=< <B>Main element</B><BR/><FONT POINT-SIZE="10">biggest_mask</FONT> >];
+  "Colored element" [shape=box, label=< <B>Colored element</B><BR/><FONT POINT-SIZE="10">colored_mask</FONT> >];
+  "Min size" [shape=box, label=< <B>Min size</B><BR/><FONT POINT-SIZE="10">image_analysis.image_processing.min_size</FONT> >];
+  "Taille palette" -> "Extract palette" [label="n_colors"];
+  "Taille palette" -> "Palette indices" [label="n"];
+  "Extract palette" -> "Recolor" [label="palette"];
+  "Recolor" -> "Remove palette" [label="recolored_image"];
+  "Extract palette" -> "Remove palette" [label="palette"];
+  "Palette indices" -> "Remove palette" [label="indices_to_remove"];
+  "Remove palette" -> "To mask" [label="image"];
+  "To mask" -> "Isolate" [label="binary_mask"];
+  "Isolate" -> "Main element" [label="elements"];
+  "Main element" -> "Colored element" [label="mask"];
+  "Colored element" -> "Min size" [label="image"];
+}

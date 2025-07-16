@@ -1,0 +1,81 @@
+{
+    "name": "If Pipeline",
+    "description": "",
+    "nodes": [
+        {
+            "id": "Start",
+            "type": "f1",
+            "fixed_params": {}
+        },
+        {
+            "id": "ConditionInput",
+            "type": "f2",
+            "fixed_params": {}
+        },
+        {
+            "id": "IF1",
+            "type": "NodeIf",
+            "condition_type": "__main__.condition_func",
+            "true_pipeline": {
+                "name": "TruePipeline",
+                "description": "",
+                "nodes": [
+                    {
+                        "id": "T1",
+                        "type": "traitement_true",
+                        "fixed_params": {}
+                    },
+                    {
+                        "id": "T2",
+                        "type": "traitement_true",
+                        "fixed_params": {}
+                    }
+                ],
+                "edges": [
+                    {
+                        "from_node": "T1",
+                        "to_node": "T2",
+                        "to_input": "data"
+                    }
+                ]
+            },
+            "false_pipeline": {
+                "name": "FalsePipeline",
+                "description": "",
+                "nodes": [
+                    {
+                        "id": "F1",
+                        "type": "traitement_false",
+                        "fixed_params": {}
+                    }
+                ],
+                "edges": []
+            },
+            "fixed_params": {
+                "threshold": 5
+            }
+        },
+        {
+            "id": "End",
+            "type": "traitement_false",
+            "fixed_params": {}
+        }
+    ],
+    "edges": [
+        {
+            "from_node": "ConditionInput",
+            "to_node": "IF1",
+            "to_input": "condition_func:value"
+        },
+        {
+            "from_node": "Start",
+            "to_node": "IF1",
+            "to_input": "data"
+        },
+        {
+            "from_node": "IF1",
+            "to_node": "End",
+            "to_input": "data"
+        }
+    ]
+}

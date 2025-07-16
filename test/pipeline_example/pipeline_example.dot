@@ -1,0 +1,14 @@
+digraph Pipeline {
+  rankdir=TB;
+  node [fontsize=12 fontname="Helvetica"];
+  "A" [shape=box, label=< <B>A</B><BR/><FONT POINT-SIZE="10">add</FONT> >];
+  "B" [shape=box, label=< <B>B</B><BR/><FONT POINT-SIZE="10">multiply</FONT> >];
+  "C" [shape=box, label=< <B>C</B><BR/><FONT POINT-SIZE="10">subtract</FONT> >];
+  "D" [shape=box, label=< <B>D</B><BR/><FONT POINT-SIZE="10">add</FONT> >];
+  "E" [shape=box, label=< <B>E</B><BR/><FONT POINT-SIZE="10">multiply</FONT> >];
+  "A" -> "B" [label="a"];
+  "B" -> "C" [label="x"];
+  "A" -> "D" [label="y"];
+  "C" -> "E" [label="a"];
+  "D" -> "E" [label="b"];
+}

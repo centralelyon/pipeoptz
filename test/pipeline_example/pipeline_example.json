@@ -1,0 +1,67 @@
+{
+    "name": "Example Pipeline",
+    "description": "This is an example pipeline.",
+    "nodes": [
+        {
+            "id": "A",
+            "type": "add",
+            "fixed_params": {
+                "x": 5,
+                "y": 3
+            }
+        },
+        {
+            "id": "B",
+            "type": "multiply",
+            "fixed_params": {
+                "b": 10
+            }
+        },
+        {
+            "id": "D",
+            "type": "add",
+            "fixed_params": {
+                "x": 1
+            }
+        },
+        {
+            "id": "C",
+            "type": "subtract",
+            "fixed_params": {
+                "y": 2
+            }
+        },
+        {
+            "id": "E",
+            "type": "multiply",
+            "fixed_params": {}
+        }
+    ],
+    "edges": [
+        {
+            "from_node": "A",
+            "to_node": "B",
+            "to_input": "a"
+        },
+        {
+            "from_node": "B",
+            "to_node": "C",
+            "to_input": "x"
+        },
+        {
+            "from_node": "A",
+            "to_node": "D",
+            "to_input": "y"
+        },
+        {
+            "from_node": "C",
+            "to_node": "E",
+            "to_input": "a"
+        },
+        {
+            "from_node": "D",
+            "to_node": "E",
+            "to_input": "b"
+        }
+    ]
+}
