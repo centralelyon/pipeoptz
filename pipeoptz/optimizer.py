@@ -98,9 +98,7 @@ class PipelineOptimizer:
         """Updates the pipeline with the current parameter values."""
         params = {}
         for param in self.params_to_optimize:
-            if not param.node_id in params:
-                params[param.node_id] = {}
-            params[param.node_id][param.param_name] = param.get_value()
+            params[f"{param.node_id}.{param.param_name}"] = param.get_value()
         self.pipeline.set_fixed_params(params)
 
     def get_params_value(self):
@@ -135,8 +133,8 @@ class PipelineOptimizer:
             index, res, t = self.pipeline.run(run_param, optimize_memory=True)
             results.append(res[index])
             loss += self.loss(results[-1], self.y[i])
-            if t[0] > self.max_time_pipeline:
-                return results, float("inf")
+            if self.max_time_pipeline not in (0, None, -1) and t[0] > self.max_time_pipeline:
+                return results+[None]*(len(self.X)-i-1), float("inf")
         loss /= i+1
         return results, loss
 
@@ -233,7 +231,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_params, loss_log
 
-    def optimize_SA(self, iterations=1000, initial_temp=1.0, cooling_rate=0.95, verbose=False):
+    def optimize_SA(self, iterations=100, initial_temp=1.0, cooling_rate=0.95, verbose=False):
         """
         Optimizes the pipeline using Simulated Annealing (SA).
 
@@ -442,7 +440,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_individual, loss_log
     
-    def optimize_grid_search(self, max_combinations=1000, param_sampling=None, verbose=False):
+    def optimize_grid_search(self, max_combinations=100, param_sampling=None, verbose=False):
         """
         Exhaustively searches all possible parameter combinations (within a limited budget).
 

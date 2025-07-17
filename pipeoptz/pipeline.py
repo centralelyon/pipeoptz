@@ -69,15 +69,19 @@ class Pipeline:
 
     def set_fixed_params(self, params):
         """Sets fixed parameters for multiple nodes in the pipeline."""
-        for node_id, params in params.items():
+        for id, value in params.items():
+            node_id, param = id.split('.', 1)
             if node_id not in self.nodes:
                 raise ValueError(f"The node with id '{node_id}' does not exist in the pipeline.")
-            for key, value in params.items():
-                self.nodes[node_id].set_fixed_param(key, value)
+            self.nodes[node_id].set_fixed_param(param, value)
     
     def get_fixed_params(self):
         """Gets the fixed parameters from all nodes in the pipeline."""
-        return {node_id: node.get_fixed_params() for node_id, node in self.nodes.items()}
+        params = {}
+        for node_id, node in self.nodes.items():
+            for param, value in node.get_fixed_params().items():
+                params[f"{node_id}.{param}"] = value
+        return params
     
     def _get_graph_representation(self):
         """

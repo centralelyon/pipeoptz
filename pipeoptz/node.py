@@ -78,7 +78,7 @@ class Node:
                 self.input_hash_last_exec = current_input_hash
             return self.output
         except Exception as e:
-            print("Error in executing node {self.id}: {e}")
+            print(f"Error in executing node {self.id}: {e}")
             print("Node fixed parameters:", self.fixed_params)
             if inputs:
                 print("Node inputs:", inputs)

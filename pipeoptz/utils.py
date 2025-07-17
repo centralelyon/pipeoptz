@@ -73,5 +73,12 @@ def ith_subset(n: int, i: int) -> list[int]:
             x += 1
         subset.append(x)
         x += 1
-
     return subset
+
+def mse_loss(image_a, image_b):
+    """Calculate the mean squared error (MSE) between two images."""
+    if image_a is None or image_b is None:
+        return float('inf')
+    err = np.sum((image_a.astype("float") - image_b.astype("float")) ** 2)
+    err /= float(image_a.shape[0] * image_a.shape[1])
+    return err
