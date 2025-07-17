@@ -27,7 +27,7 @@ class Parameter:
         Returns the parametric space of the parameter.
         This should be overridden in subclasses.
         """
-        raise NotImplementedError("Cette méthode doit être implémentée dans les sous-classes.")
+        raise NotImplementedError("This method must be implemented in subclasses.")        
 
     def set_value(self, value):
         """
@@ -48,7 +48,7 @@ class Parameter:
         Returns a random value for the parameter.
         This should be overridden in subclasses.
         """
-        raise NotImplementedError("Cette méthode doit être implémentée dans les sous-classes.")
+        raise NotImplementedError("This method must be implemented in subclasses.")
 
 
 class IntParameter(Parameter):
@@ -83,9 +83,9 @@ class IntParameter(Parameter):
                         min_value is greater than max_value.
         """
         if not isinstance(min_value, (int, np.integer)) or not isinstance(max_value, (int, np.integer)):
-            raise ValueError("Les valeurs min_value et max_value doivent être des entiers.")
+            raise ValueError("min_value and max_value must be integers.")
         if min_value > max_value:
-            raise ValueError("min_value ne peut pas être supérieur à max_value.")
+            raise ValueError("min_value cannot be greater than max_value.")
         super(IntParameter, self).__init__(node_id, param_name)
         self.min_value = max(min_value, self.MININT)
         self.max_value = min(max_value, self.MAXINT)
@@ -117,9 +117,9 @@ class IntParameter(Parameter):
             ValueError: If the value is not an integer or is outside the defined range.
         """
         if not isinstance(value, (int, np.integer)):
-            raise ValueError(f"La valeur doit être un entier, mais 'value' est de type {type(value)}.")
+            raise ValueError(f"Value must be an integer, but 'value' is of type {type(value)}.")
         elif value < self.min_value or value > self.max_value:
-            raise ValueError(f"La valeur doit être comprise entre {self.min_value} et {self.max_value}.")
+            raise ValueError("Value must be between {self.min_value} and {self.max_value}.")
         self.value = value
 
     def get_value(self):
@@ -175,9 +175,10 @@ class FloatParameter(Parameter):
                         min_value is greater than max_value.
         """
         if not isinstance(min_value, (float, int, np.integer, np.floating)) or not isinstance(max_value, (float, int, np.integer, np.floating)):
-            raise ValueError("Les valeurs min_value et max_value doivent être des flottants.")
+            raise ValueError("min_value and max_value must be floats.")
         if min_value > max_value:
-            raise ValueError("min_value ne peut pas être supérieur à max_value.")
+            raise ValueError("min_value cannot be greater than max_value.")
+        
         super(FloatParameter, self).__init__(node_id, param_name)
         self.min_value = max(float(min_value), self.MINFLOAT)
         self.max_value = min(float(max_value), self.MAXFLOAT)
@@ -209,9 +210,9 @@ class FloatParameter(Parameter):
             ValueError: If the value is not a float or is outside the defined range.
         """
         if not isinstance(value, (float, int, np.integer, np.floating)):
-            raise ValueError(f"La valeur doit être un float, mais 'value' est de type {type(value)}.")
+            raise ValueError(f"The value must be a float, but 'value' is of type {type(value)}.")
         elif value < self.min_value or value > self.max_value:
-            raise ValueError(f"La valeur doit être comprise entre {self.min_value} et {self.max_value}.")
+            raise ValueError(f"Value must be between {self.min_value} and {self.max_value}.")
         self.value = float(value)
     
     def get_value(self):

@@ -211,7 +211,7 @@ class PipelineOptimizer:
 
                 for name in param_names:
                     val = candidate[name]
-                    heuristics[name][val] = max(1e-6, 1.0 / (1e-6 + loss))  # éviter division par zéro
+                    heuristics[name][val] = max(1e-6, 1.0 / (1e-6 + loss))  # avoid the division by zero
 
                 if loss < best_loss:
                     best_loss = loss
@@ -222,7 +222,7 @@ class PipelineOptimizer:
                 for val in pheromones[name]:
                     pheromones[name][val] *= (1.0 - evaporation_rate)
 
-            # Dépôt de phéromone par la meilleure fourmi
+            # Pheromone deposit by the best ant
             best_idx = int(np.argmin(losses))
             for name, val in solutions[best_idx].items():
                 pheromones[name][val] += 1.0 / (1.0 + losses[best_idx])
@@ -471,7 +471,7 @@ class PipelineOptimizer:
                     values.add(p.get_random_value())
                 param_values.append(list(values))
 
-        # On a réécrit la fonction product pour gérer les grands espaces de recherche sans tous les expliciter d'un coup
+        # We rewrote the product function to handle large search spaces without explicitly listing them all at once.        
         if np.prod([len(v) for v in param_values])>>4 > max_combinations:
             combinations = product(*param_values, random=True, max_combinations=max_combinations, optimize_memory=True)
         else:
@@ -568,13 +568,14 @@ class PipelineOptimizer:
         import warnings
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
-        # Les paramètres optimisables en liste (on exclut MultiChoiceParameter pour simplifier l'implémentation)
-        assert any(not isinstance(p, MultiChoiceParameter) for p in self.params_to_optimize)
+        # Filter out MultiChoiceParameter for simplicity in this implementation
+        # MultiChoiceParameter is not directly supported by the current encoding/decoding for BO
+        assert any(not isinstance(p, MultiChoiceParameter) for p in self.params_to_optimize), "MultiChoiceParameter is not supported in Bayesian Optimization yet."
         param_defs = [(f"{p.node_id}.{p.param_name}", p) for p in self.params_to_optimize]
 
         n_candidates = 100 * len(param_defs) if n_candidates is None else n_candidates
 
-        # Échantillonnage initial aléatoire
+        # Initial random sampling
         X_raw = []
         Y = []
         for _ in range(init_points):
@@ -589,11 +590,11 @@ class PipelineOptimizer:
         X_raw = np.array(X_raw)
         Y = np.array(Y)
 
-        # Normalisation de X
+        # Scale X
         scaler = StandardScaler()
         X = scaler.fit_transform(X_raw)
 
-        # Modèle GP
+        # GP model
         kernel = C(1.0) * Matern(nu=2.5)
         if noise_level > 0:
             kernel += WhiteKernel(noise_level=noise_level)
@@ -608,7 +609,7 @@ class PipelineOptimizer:
             print(f"Iteration {i+1}/{iterations}", end="\r") if verbose else None
             gp.fit(X, Y)
 
-            # Génère des candidats aléatoires
+            # Generate random candidates
             candidates_raw = []
             for _ in range(n_candidates):
                 cand = {name: p.get_random_value() for name, p in param_defs}
@@ -628,7 +629,7 @@ class PipelineOptimizer:
             self.set_params(params)
             _, loss = self.evaluate()
 
-            # Mise à jour
+            # update
             X = np.vstack([X, scaler.transform([x_next])])
             Y = np.append(Y, loss)
 

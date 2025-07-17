@@ -49,17 +49,17 @@ class Pipeline:
         Raises:
             ValueError: If a node with the same ID already exists.
         """
-        assert not node.get_id().startswith("run_params:"), ValueError("L'ID d'un noeud ne doit pas commencer par 'run_params:'")
+        assert not node.get_id().startswith("run_params:"), "The ID of a node cannot start with 'run_params:'"
         if isinstance(node, Node):
             node_id = node.get_id()
             if node_id in self.nodes:
-                raise ValueError(f"Un nœud avec l'id '{node_id}' existe déjà.")
+                raise ValueError(f"A node with id '{node_id}' already exists.")
             self.nodes[node_id] = node
             self.node_dependencies[node_id] = predecessors
 
         elif isinstance(node, Pipeline):
             if "["+node.name+"]" in self.nodes:
-                raise ValueError(f"Une pipeline avec le nom {node.name}' existe déjà.")
+                raise ValueError(f"A pipeline with the name '{node.name}' already exists.")
             self.nodes["["+node.name+"]"] = node
             self.node_dependencies["["+node.name+"]"] = predecessors
 
@@ -71,7 +71,7 @@ class Pipeline:
         """Sets fixed parameters for multiple nodes in the pipeline."""
         for node_id, params in params.items():
             if node_id not in self.nodes:
-                raise ValueError(f"Le noeud d'id '{node_id}' n'existe pas dans la pipeline.")
+                raise ValueError(f"The node with id '{node_id}' does not exist in the pipeline.")
             for key, value in params.items():
                 self.nodes[node_id].set_fixed_param(key, value)
     
@@ -81,7 +81,7 @@ class Pipeline:
     
     def _get_graph_representation(self):
         """
-        Construit une représentation du graphe avec les degrés entrants et les listes de successeurs.
+        Build a graph representation with in-degrees and successor lists.
         """
         in_degree = {node_id: 0 for node_id in self.nodes}
         successors = {node_id: [] for node_id in self.nodes}
@@ -91,9 +91,9 @@ class Pipeline:
                 if source_node_id.startswith("run_params:"):
                     continue
                 elif source_node_id not in self.nodes:
-                     raise ValueError(f"Le noeud source '{source_node_id}' pour '{node_id}' n'existe pas dans le pipeline.")
-                elif node_id not in self.nodes: # Devrait être impossible si add_node est bien utilisé
-                     raise ValueError(f"Le noeud cible '{node_id}' n'existe pas dans le pipeline.")
+                    raise ValueError(f"The source node '{source_node_id}' for '{node_id}' does not exist in the pipeline")
+                elif node_id not in self.nodes:
+                    raise ValueError(f"The target node '{node_id}' does not exist in the pipeline.")
                 else:
                     successors[source_node_id].append(node_id)
                     in_degree[node_id] += 1
@@ -113,21 +113,19 @@ class Pipeline:
             ValueError: If a cycle is detected in the graph.
         """
         in_degree, successors = self._get_graph_representation()
-        
         queue = deque([node_id for node_id, degree in in_degree.items() if degree == 0])
         topological_order = []
 
         while queue:
             u = queue.popleft()
             topological_order.append(u)
-
             for v in successors[u]:
                 in_degree[v] -= 1
                 if in_degree[v] == 0:
                     queue.append(v)
 
         if len(topological_order) != len(self.nodes):
-            raise ValueError("Le graphe contient un cycle, le tri topologique est impossible.")
+            raise ValueError("The graph contains a cycle, topological sort is impossible.")
         return topological_order
 
     def run(self, run_params={}, optimize_memory=False, skip_failed_images=False, debug=False):
@@ -157,22 +155,22 @@ class Pipeline:
         try:
             ordered_nodes = self.static_order()
         except ValueError as e:
-            raise ValueError(f"Erreur de préparation de la pipeline: {e}")
+            raise ValueError(f"Error preparing the pipeline: {e}")
 
         for i, node_id in enumerate(ordered_nodes):
             start_time = time.time()
-            print(f"Exécution du noeud: {node_id}") if debug else None
+            print(f"Executing node: {node_id}") if debug else None
             if node_id not in self.nodes:
-                raise ValueError(f"Le noeud d'id: '{node_id}' a été spécifié comme dépendance mais n'a pas été ajouté au pipeline.")
+                raise ValueError(f"The node with id: '{node_id}' was specified as a dependency but has not been added to the pipeline.")
+            
             if isinstance(self.nodes[node_id], NodeIf):
                 self.nodes[node_id].set_run_params(skip_failed_images, debug)
-
             node = self.nodes[node_id]
             inputs = {}
             loop_inputs = {}
             multiple_inputs = {}
             len_loop = float("inf")
-            # node_dependencies contient les prédécesseurs de node_id
+            # node_dependencies contains the predecessors of node_id
             for input_param_name, source_node_id in self.node_dependencies.get(node_id, {}).items():
                 if source_node_id.startswith("run_params:"):
                     inputs[input_param_name] = run_params[source_node_id.split(":", 1)[1]]
@@ -191,12 +189,12 @@ class Pipeline:
                 node_outputs[node_id] = []
                 for i in range(len_loop):
                     try:
-                        print(f"{node_id} en exécution itérations {i+1}/{len_loop}", end="\r") if debug else None
+                        print(f"Executing node: {node_id} iteration {i+1}/{len_loop}", end="\r") if debug else None
                         node_outputs[node_id].append(node.execute({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}, memory=False) if node_id[0]+node_id[-1] != "[]" \
                                         else node.run({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}, optimize_memory, skip_failed_images, debug))
                     except Exception as e:
                         if skip_failed_images:
-                            print(f"Erreur dans le noeud {node_id} à l'itération {i+1}/{len_loop}: {e}") if debug else None
+                            print(f"Error in node {node_id} at iteration {i+1}/{len_loop}: {e}")
                             continue
                         raise e
                 print() if debug else None
@@ -204,20 +202,22 @@ class Pipeline:
                 node_outputs[node_id] = []
                 for p in product(*multiple_inputs.values()):
                     try:
-                        print(f"{node_id} en exécution sur {zip(multiple_inputs.keys(),p)}", end="\r") if debug else None
+                        print(f"Executing node: {node_id} with parameters {dict(zip(multiple_inputs.keys(), p))}", end="\r") if debug else None
                         node_outputs[node_id].append(node.execute({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, memory=False))
                         node_outputs[node_id].append(node.execute({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, memory=False) if node_id[0]+node_id[-1] != "[]" \
                                         else node.run({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, optimize_memory, skip_failed_images, debug))
                     except Exception as e:
                         if skip_failed_images:
-                            print(f"Erreur dans le noeud {node_id} avec les paramètres {zip(multiple_inputs.keys(),p)}: {e}") if debug else None
+                            print(f"Error in node {node_id} with parameters {dict(zip(multiple_inputs.keys(),p))}: {e}")
                             continue
                         raise e
                     print() if debug else None
             else:
-                raise NotImplementedError("La combinaison de boucles et d'entrées multiples n'est pas implémentée.")
+                raise NotImplementedError("Combining loops and multiple inputs is not implemented.")
 
-            # on efface la mémoire des noeuds qu'on n'utilise plus
+            # If optimize_memory is True, delete outputs of nodes that are no longer needed
+            # We check if the output of a predecessor node (dep_id) is still needed by any
+            # of the subsequent nodes in the topological order. If not, we delete it.            
             if optimize_memory:
                 for dep_id in self.node_dependencies.get(node_id, {}).values():
                     still_used = False

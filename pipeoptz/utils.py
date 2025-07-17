@@ -55,7 +55,7 @@ def ith_subset(n: int, i: int) -> list[int]:
     if i < 0 or i >= total:
         raise ValueError(f"Index i must be in [0, {total - 1}]")
 
-    # Step 1: find the cardinality group (number of elements in subset)
+    # Find the cardinality group (number of elements in subset)
     remaining = i
     for k in range(n + 1):  # cardinalities from 0 to n
         c = comb(n, k)
@@ -64,7 +64,7 @@ def ith_subset(n: int, i: int) -> list[int]:
             break
         remaining -= c
 
-    # Step 2: generate the `remaining`-th k-combination in lex order
+    # Generate the `remaining`-th k-combination in lex order
     subset = []
     x = 0
     for j in range(cardinality):

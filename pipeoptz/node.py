@@ -78,10 +78,10 @@ class Node:
                 self.input_hash_last_exec = current_input_hash
             return self.output
         except Exception as e:
-            print(f"Erreur lors de l'exécution du noeud {self.id}: {e}")
-            print("Paramètres fixes du noeud :", self.fixed_params)
+            print("Error in executing node {self.id}: {e}")
+            print("Node fixed parameters:", self.fixed_params)
             if inputs:
-                print("Entrées du noeud :", inputs)
+                print("Node inputs:", inputs)
             raise
 
     def get_fixed_params(self):
@@ -96,10 +96,11 @@ class Node:
             fixed_params (dict): A dictionary of parameters to set.
         """
         if not isinstance(fixed_params, dict):
-            raise ValueError("Les paramètres fixes doivent être un dictionnaire.")
+            raise ValueError("Fixed parameters must be a dictionary.")
+            
         for key, value in fixed_params.items():
             if not isinstance(key, str):
-                raise ValueError(f"La clé '{key}' n'est pas une chaîne de caractères.")
+                raise ValueError(f"Key '{key}' is not a string.")
             self.set_fixed_param(key, value)
 
     def set_fixed_param(self, key, value):
@@ -114,7 +115,7 @@ class Node:
             ValueError: If the key is not an existing fixed parameter.
         """
         if key not in self.fixed_params:
-            raise ValueError(f"La clé '{key}' n'est pas un paramètre fixe du noeud '{self.id}'.")
+            raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
         self.fixed_params[key] = value
 
     def is_fixed_param(self, key):
@@ -195,7 +196,7 @@ class NodeIf(Node):
                   parameters of the true and false pipelines under the keys
                   "true_pipeline" and "false_pipeline".
         """
-        # Retourne les paramètres fixes du noeud IF : donc fixe_params + ceux des pipelines
+        # Returns the fixed parameters of the IF node: fixed_params + those of the pipelines
         true_fixed_params = self.true_pipeline.get_fixed_params()
         false_fixed_params = self.false_pipeline.get_fixed_params()
         return {**self.fixed_params, "true_pipeline": true_fixed_params, "false_pipeline": false_fixed_params}
@@ -223,5 +224,5 @@ class NodeIf(Node):
             self.false_pipeline.set_fixed_param(value)
         else:
             if key in self.fixed_params:
-                raise ValueError(f"La clé '{key}' n'est pas un paramètre fixe du noeud '{self.id}'.")
+                raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
             self.fixed_params[key] = value
