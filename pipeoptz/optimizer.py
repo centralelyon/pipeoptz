@@ -9,7 +9,6 @@ from .parameter import IntParameter, FloatParameter, ChoiceParameter, BoolParame
 from .pipeline import Pipeline
 
 
-
 class PipelineOptimizer:
     """
     Provides a framework for optimizing pipeline parameters using various algorithms.

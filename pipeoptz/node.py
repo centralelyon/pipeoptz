@@ -1,7 +1,3 @@
-
-
-
-
 class Node:
     """
     Represents a single, executable step (a node) in a processing pipeline.

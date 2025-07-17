@@ -1,14 +1,9 @@
-"""
-This module provides classes for creating and managing customizable data processing pipelines.
-It allows for the construction of complex workflows as Directed Acyclic Graphs (DAGs),
-where each node represents a specific operation.
-"""
-
 import json
 import importlib
 import os, sys, time
 from collections import deque
-
+from .node import Node, NodeIf
+from .utils import product
 
 class Pipeline:
     """
