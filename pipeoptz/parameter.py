@@ -450,7 +450,7 @@ class BoolParameter(Parameter):
         Raises:
             ValueError: If the value is not a boolean.
         """
-        if not isinstance(value, bool):
+        if not isinstance(value, (bool, np.bool)):
             raise ValueError(f"Value must be a boolean, but received type {type(value)}.")
         self.value = value
 

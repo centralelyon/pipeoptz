@@ -211,7 +211,7 @@ class PipelineOptimizer:
                     val = candidate[name]
                     heuristics[name][val] = max(1e-6, 1.0 / (1e-6 + loss))  # avoid the division by zero
 
-                if loss < best_loss:
+                if loss <= best_loss:
                     best_loss = loss
                     best_params = candidate.copy()
 
@@ -485,7 +485,7 @@ class PipelineOptimizer:
             self.set_params(params)
             _, loss = self.evaluate()
 
-            if loss < best_loss:
+            if loss <= best_loss:
                 best_loss = loss
                 best_params = params.copy()
 
@@ -566,6 +566,8 @@ class PipelineOptimizer:
         import warnings
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
+        MAXFLOAT = 1e100
+
         # Filter out MultiChoiceParameter for simplicity in this implementation
         # MultiChoiceParameter is not directly supported by the current encoding/decoding for BO
         assert any(not isinstance(p, MultiChoiceParameter) for p in self.params_to_optimize), "MultiChoiceParameter is not supported in Bayesian Optimization yet."
@@ -583,7 +585,7 @@ class PipelineOptimizer:
             self.set_params(sample)
             _, loss = self.evaluate()
             X_raw.append(self._encode(sample, param_defs))
-            Y.append(loss)
+            Y.append(min(MAXFLOAT, loss))
 
         X_raw = np.array(X_raw)
         Y = np.array(Y)
@@ -629,7 +631,7 @@ class PipelineOptimizer:
 
             # update
             X = np.vstack([X, scaler.transform([x_next])])
-            Y = np.append(Y, loss)
+            Y = np.append(Y, min(MAXFLOAT, loss))
 
             if loss < best_loss:
                 best_loss = loss
