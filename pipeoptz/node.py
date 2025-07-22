@@ -117,6 +117,7 @@ class Node:
         if key not in self.fixed_params:
             raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
         self.fixed_params[key] = value
+        self.clear_memory()
 
     def is_fixed_param(self, key):
         """Checks if a parameter name is in the fixed parameters."""
