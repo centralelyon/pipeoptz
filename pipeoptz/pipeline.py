@@ -65,7 +65,13 @@ class Pipeline:
 
     def get_node(self, node_id):
         """Gets a node by its ID."""
-        return self.nodes.get(node_id)
+        if node_id not in self.nodes:
+            raise ValueError("The node does not exist in the pipeline.")
+        return self.nodes[node_id]
+    
+    def get_nodes(self):
+        """Gets all nodes in the pipeline."""
+        return self.nodes
 
     def set_fixed_params(self, params):
         """Sets fixed parameters for multiple nodes in the pipeline."""
