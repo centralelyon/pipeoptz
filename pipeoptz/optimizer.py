@@ -22,7 +22,7 @@ class PipelineOptimizer:
         pipeline (Pipeline): The pipeline instance to be optimized.
         params_to_optimize (list): A list of Parameter objects to be tuned.
     """
-    def __init__(self, pipeline, loss_function, max_time_pipeline, X, y):
+    def __init__(self, pipeline, loss_function, max_time_pipeline):
         """
         Initializes a PipelineOptimizer.
 
@@ -37,19 +37,12 @@ class PipelineOptimizer:
         """
         assert isinstance(pipeline, Pipeline), "pipeline must be an instance of Pipeline"
         assert callable(loss_function), "loss_function must be a callable function"
-        assert isinstance(X, list), "X must be a list"
-        assert isinstance(y, list), "y must be a list"
-        assert len(X) == len(y), "X and y must have the same length"
-        assert len(X) > 0, "X must not be empty"
-        assert all(isinstance(run_params, dict) for run_params in X), "All items in X must be dictionaries"
         assert isinstance(max_time_pipeline, (int, float)), "max_time_pipeline must be a number"
         assert max_time_pipeline > 0, "max_time_pipeline must be a positive number"
 
         self.pipeline = pipeline
         self.params_to_optimize = []
         self.max_time_pipeline = max_time_pipeline
-        self.X = X
-        self.y = y
         self.loss = loss_function
 
     def add_param(self, param):
@@ -114,7 +107,7 @@ class PipelineOptimizer:
             values[f"{param.node_id}.{param.param_name}"] = param.get_value()
         return values
 
-    def evaluate(self):
+    def evaluate(self, X, y):
         """
         Evaluates the current parameters of the pipeline.
 
@@ -129,16 +122,16 @@ class PipelineOptimizer:
         # Run the pipeline and return the outputs
         results = []
         loss = 0.
-        for i, run_param in enumerate(self.X):
+        for i, run_param in enumerate(X):
             index, res, t = self.pipeline.run(run_param, optimize_memory=True)
             results.append(res[index])
-            loss += self.loss(results[-1], self.y[i])
+            loss += self.loss(results[-1], y[i])
             if self.max_time_pipeline not in (0, None, -1) and t[0] > self.max_time_pipeline:
-                return results+[None]*(len(self.X)-i-1), float("inf")
+                return results+[None]*(len(X)-i-1), float("inf")
         loss /= i+1
         return results, loss
 
-    def optimize_ACO(self, iterations=100, ants=20, alpha=1.0, beta=1.0, evaporation_rate=0.3, param_sampling=20, verbose=False):
+    def optimize_ACO(self, X, y, iterations=100, ants=20, alpha=1.0, beta=1.0, evaporation_rate=0.3, param_sampling=20, verbose=False):
         """
         Ant Colony Optimization (ACO) with real use of beta for heuristic guidance.
 
@@ -202,7 +195,7 @@ class PipelineOptimizer:
                     candidate[name] = selected
 
                 self.set_params(candidate)
-                _, loss = self.evaluate()
+                _, loss = self.evaluate(X, y)
 
                 solutions.append(candidate)
                 losses.append(loss)
@@ -231,7 +224,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_params, loss_log
 
-    def optimize_SA(self, iterations=100, initial_temp=1.0, cooling_rate=0.95, verbose=False):
+    def optimize_SA(self, X, y, iterations=100, initial_temp=1.0, cooling_rate=0.95, verbose=False):
         """
         Optimizes the pipeline using Simulated Annealing (SA).
 
@@ -249,7 +242,7 @@ class PipelineOptimizer:
             for p in self.params_to_optimize
         }
         self.set_params(current_params)
-        _, current_loss = self.evaluate()
+        _, current_loss = self.evaluate(X, y)
 
         best_params = current_params.copy()
         best_loss = current_loss
@@ -266,7 +259,7 @@ class PipelineOptimizer:
             candidate[name] = param.get_random_value()
 
             self.set_params(candidate)
-            _, candidate_loss = self.evaluate()
+            _, candidate_loss = self.evaluate(X, y)
 
             delta = candidate_loss - current_loss
             if delta < 0 or np.exp(-delta / temperature) > rd.random():
@@ -283,7 +276,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_params, loss_log
 
-    def optimize_PSO(self, iterations=100, swarm_size=20, inertia=0.5, cognitive=1.5, social=1.5, verbose=False):
+    def optimize_PSO(self, X, y, iterations=100, swarm_size=20, inertia=0.5, cognitive=1.5, social=1.5, verbose=False):
         """
         Optimizes the pipeline using Particle Swarm Optimization (PSO).
 
@@ -311,7 +304,7 @@ class PipelineOptimizer:
             velocity = {name: 0.0 for name in param_names}
 
             self.set_params(particle)
-            _, loss = self.evaluate()
+            _, loss = self.evaluate(X, y)
 
             particles.append(particle)
             velocities.append(velocity)
@@ -347,7 +340,7 @@ class PipelineOptimizer:
                         new_particle[name] = particles[i][name]
 
                 self.set_params(new_particle)
-                _, loss = self.evaluate()
+                _, loss = self.evaluate(X, y)
 
                 if loss < personal_best_loss[i]:
                     personal_best[i] = new_particle.copy()
@@ -365,7 +358,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_particle, loss_log
 
-    def optimize_GA(self, generations=50, population_size=20, mutation_rate=0.1, crossover_rate=0.7, verbose=False):
+    def optimize_GA(self, X, y, generations=50, population_size=20, mutation_rate=0.1, crossover_rate=0.7, verbose=False):
         """
         Optimizes the pipeline using Genetic Algorithm (GA).
 
@@ -403,7 +396,7 @@ class PipelineOptimizer:
         evaluated = []
         for ind in population:
             self.set_params(ind)
-            _, loss = self.evaluate()
+            _, loss = self.evaluate(X, y)
             evaluated.append((ind, loss))
 
         best_individual = min(evaluated, key=lambda x: x[1])[0].copy()
@@ -427,7 +420,7 @@ class PipelineOptimizer:
             evaluated = []
             for ind in new_population:
                 self.set_params(ind)
-                _, loss = self.evaluate()
+                _, loss = self.evaluate(X, y)
                 evaluated.append((ind, loss))
 
                 if loss < best_loss:
@@ -440,7 +433,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_individual, loss_log
     
-    def optimize_GS(self, max_combinations=100, param_sampling=None, verbose=False):
+    def optimize_GS(self, X, y, max_combinations=100, param_sampling=None, verbose=False):
         """
         Exhaustively searches all possible parameter combinations (within a limited budget).
 
@@ -483,7 +476,7 @@ class PipelineOptimizer:
             print(f"Iteration {i+1}/{max_combinations}", end="\r") if verbose else None
             params = dict(zip(param_names, combo))
             self.set_params(params)
-            _, loss = self.evaluate()
+            _, loss = self.evaluate(X, y)
 
             if loss <= best_loss:
                 best_loss = loss
@@ -546,7 +539,7 @@ class PipelineOptimizer:
                 params[name] = float(np.clip(x[i], p.min_value, p.max_value))
         return params
 
-    def optimize_BO(self, iterations=50, init_points=5, noise_level=0, n_candidates=None, verbose=False):
+    def optimize_BO(self, X_init, y_init, iterations=50, init_points=5, noise_level=0, n_candidates=None, verbose=False):
         """
         Bayesian Optimization using Gaussian Process and Expected Improvement (EI),
         with input normalization and robust handling.
@@ -583,7 +576,7 @@ class PipelineOptimizer:
             for name, p in param_defs:
                 sample[name] = p.get_random_value()
             self.set_params(sample)
-            _, loss = self.evaluate()
+            _, loss = self.evaluate(X_init, y_init)
             X_raw.append(self._encode(sample, param_defs))
             Y.append(min(MAXFLOAT, loss))
 
@@ -627,7 +620,7 @@ class PipelineOptimizer:
             x_next = candidates_raw[np.argmax(ei)]
             params = self._decode(x_next, param_defs)
             self.set_params(params)
-            _, loss = self.evaluate()
+            _, loss = self.evaluate(X_init, y_init)
 
             # update
             X = np.vstack([X, scaler.transform([x_next])])
@@ -642,7 +635,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return self._decode(best_x, param_defs), loss_log
         
-    def optimize(self, method, verbose=False, **kwargs):
+    def optimize(self, X, y, method, verbose=False, **kwargs):
         """
         Optimizes the pipeline using the specified method.
 
@@ -655,17 +648,22 @@ class PipelineOptimizer:
                 - dict: The best parameters found.
                 - list: A log of the loss values during optimization.
         """
+        assert isinstance(X, list), "X must be a list"
+        assert isinstance(y, list), "y must be a list"
+        assert len(X) == len(y), "X and y must have the same length"
+        assert len(X) > 0, "X must not be empty"
+        assert all(isinstance(run_params, dict) for run_params in X), "All items in X must be dictionaries"
         if method == "GS":
-            return self.optimize_GS(verbose=verbose,**kwargs)
+            return self.optimize_GS(X, y, verbose=verbose,**kwargs)
         elif method == "BO":
-            return self.optimize_BO(verbose=verbose, **kwargs)
+            return self.optimize_BO(X, y, verbose=verbose, **kwargs)
         elif method == "ACO":
-            return self.optimize_ACO(verbose=verbose, **kwargs)
+            return self.optimize_ACO(X, y, verbose=verbose, **kwargs)
         elif method == "SA":
-            return self.optimize_SA(verbose=verbose, **kwargs)
+            return self.optimize_SA(X, y, verbose=verbose, **kwargs)
         elif method == "GA":
-            return self.optimize_GA(verbose=verbose, **kwargs)
+            return self.optimize_GA(X, y, verbose=verbose, **kwargs)
         elif method == "PSO":
-            return self.optimize_PSO(verbose=verbose, **kwargs)
+            return self.optimize_PSO(X, y, verbose=verbose, **kwargs)
         else:
             raise ValueError(f"Unknown optimization method: {method}")
