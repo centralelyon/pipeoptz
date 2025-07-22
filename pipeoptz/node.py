@@ -73,7 +73,7 @@ class Node:
         try:
             if not memory:
                 return self.func(**self.fixed_params, **inputs)
-            elif self.output is None or current_input_hash != self.input_hash_last_exec:
+            elif self.output is None or current_input_hash is None or current_input_hash != self.input_hash_last_exec:
                 self.output = self.func(**self.fixed_params, **inputs)
                 self.input_hash_last_exec = current_input_hash
             return self.output

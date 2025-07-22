@@ -138,7 +138,7 @@ class Pipeline:
             raise ValueError("The graph contains a cycle, topological sort is impossible.")
         return topological_order
 
-    def run(self, run_params={}, optimize_memory=False, skip_failed_images=False, debug=False):
+    def run(self, run_params={}, optimize_memory=True, skip_failed_images=False, debug=False):
         """
         Executes the entire pipeline from start to finish.
 
