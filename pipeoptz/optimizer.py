@@ -440,7 +440,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_individual, loss_log
     
-    def optimize_grid_search(self, max_combinations=100, param_sampling=None, verbose=False):
+    def optimize_GS(self, max_combinations=100, param_sampling=None, verbose=False):
         """
         Exhaustively searches all possible parameter combinations (within a limited budget).
 
@@ -647,7 +647,7 @@ class PipelineOptimizer:
         Optimizes the pipeline using the specified method.
 
         Args:
-            method (str): The optimization method to use (e.g., "grid_search", "BO", "ACO", "SA", "GA").
+            method (str): The optimization method to use (e.g., "GS", "BO", "ACO", "SA", "GA").
             **kwargs: Additional arguments for the chosen optimization method.
 
         Returns:
@@ -655,8 +655,8 @@ class PipelineOptimizer:
                 - dict: The best parameters found.
                 - list: A log of the loss values during optimization.
         """
-        if method == "grid_search":
-            return self.optimize_grid_search(verbose=verbose,**kwargs)
+        if method == "GS":
+            return self.optimize_GS(verbose=verbose,**kwargs)
         elif method == "BO":
             return self.optimize_BO(verbose=verbose, **kwargs)
         elif method == "ACO":
