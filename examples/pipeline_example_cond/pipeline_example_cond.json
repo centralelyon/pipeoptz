@@ -33,6 +33,11 @@
                 ],
                 "edges": [
                     {
+                        "from_node": "run_params:data",
+                        "to_node": "T1",
+                        "to_input": "data"
+                    },
+                    {
                         "from_node": "T1",
                         "to_node": "T2",
                         "to_input": "data"
@@ -49,7 +54,13 @@
                         "fixed_params": {}
                     }
                 ],
-                "edges": []
+                "edges": [
+                    {
+                        "from_node": "run_params:data",
+                        "to_node": "F1",
+                        "to_input": "data"
+                    }
+                ]
             },
             "fixed_params": {
                 "threshold": 5
@@ -57,7 +68,7 @@
         },
         {
             "id": "End",
-            "type": "traitement_false",
+            "type": "integer",
             "fixed_params": {}
         }
     ],
@@ -75,7 +86,7 @@
         {
             "from_node": "IF1",
             "to_node": "End",
-            "to_input": "data"
+            "to_input": "x"
         }
     ]
 }

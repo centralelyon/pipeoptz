@@ -1,14 +1,14 @@
 digraph Pipeline {
   rankdir=TB;
   node [fontsize=12 fontname="Helvetica"];
-  "A" [shape=box, label=< <B>A</B><BR/><FONT POINT-SIZE="10">add</FONT> >];
-  "B" [shape=box, label=< <B>B</B><BR/><FONT POINT-SIZE="10">multiply</FONT> >];
-  "C" [shape=box, label=< <B>C</B><BR/><FONT POINT-SIZE="10">subtract</FONT> >];
-  "D" [shape=box, label=< <B>D</B><BR/><FONT POINT-SIZE="10">add</FONT> >];
-  "E" [shape=box, label=< <B>E</B><BR/><FONT POINT-SIZE="10">multiply</FONT> >];
-  "A" -> "B" [label="a"];
-  "B" -> "C" [label="x"];
-  "A" -> "D" [label="y"];
-  "C" -> "E" [label="a"];
-  "D" -> "E" [label="b"];
+  "A" [shape=box, label=< <B>A</B><BR/><FONT POINT-SIZE="10">add</FONT> <BR/><FONT POINT-SIZE="8"><I>(x, y)</I></FONT> >];
+  "B" [shape=box, label=< <B>B</B><BR/><FONT POINT-SIZE="10">multiply</FONT> <BR/><FONT POINT-SIZE="8"><I>(b)</I></FONT> >];
+  "C" [shape=box, label=< <B>C</B><BR/><FONT POINT-SIZE="10">subtract</FONT> <BR/><FONT POINT-SIZE="8"><I>(y)</I></FONT> >];
+  "D" [shape=box, label=< <B>D</B><BR/><FONT POINT-SIZE="10">add</FONT> <BR/><FONT POINT-SIZE="8"><I>(x)</I></FONT> >];
+  "E" [shape=doubleoctagon, label=< <B>E</B><BR/><FONT POINT-SIZE="10">multiply</FONT> >];
+  "A" -> "B" [label="a", fontsize=9];
+  "B" -> "C" [label="x", fontsize=9];
+  "A" -> "D" [label="y", fontsize=9];
+  "C" -> "E" [label="a", fontsize=9];
+  "D" -> "E" [label="b", fontsize=9];
 }

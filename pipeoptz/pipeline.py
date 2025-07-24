@@ -242,66 +242,61 @@ class Pipeline:
             self.timer[node_id] = time.time() - start_time
         return last_node_id, node_outputs, (sum(self.timer.values()), self.timer)
 
-    def to_dot(self, filepath=None, generate_png=False, png_filepath=None, _prefix=""):
+    def to_dot(self, filepath=None, generate_png=False, png_filepath=None, cleanup_dot=False, dpi=160, _prefix=""):
         """
         Generates a DOT language representation of the pipeline graph.
 
         This can be used with Graphviz to visualize the pipeline structure.
 
         Args:
-            filepath (str, optional): The path to save the .dot file. If None,
-                the DOT string is returned instead. Defaults to None.
+            filepath (str, optional): The path to save the .dot file. If None, no .dot file is saved.
             generate_png (bool, optional): If True and `filepath` is provided,
                 generates a PNG image from the DOT file using the `dot` command.
-                Defaults to False.
+                Defaults to False. It is needed to create the .dot file.
             png_filepath (str, optional): The path for the output PNG file. If None,
                 it's derived from the `filepath`. Defaults to None.
+            cleanup_dot (bool, optional): If True, deletes the .dot file after PNG is generated.
+                Defaults to False.
+            dpi (int): dpi of the PNG file.
+        
+        Returns:
+            the DOT string of the pipeline
         """
         def escape_id(nid): return f"{_prefix}{nid}"
 
         dot_lines = []
-        is_top = filepath is not None
-        if is_top:
-            dot_lines.append("digraph Pipeline {")
-            dot_lines.append('  rankdir=TB;')  # vertical layout
-            dot_lines.append('  node [fontsize=12 fontname="Helvetica"];')
+        if filepath is None and generate_png:
+            filepath = f"{self.name}.dot"
+            cleanup_dot = True
+        dot_lines.append("digraph Pipeline {" if _prefix == "" else "subgraph Pipeline {")
+        dot_lines.append('  rankdir=TB;')  # vertical layout
+        dot_lines.append('  node [fontsize=12 fontname="Helvetica"];')
+
+        last_node_id = self.static_order()[-1] if self.static_order() else None
 
         for node_id, node in self.nodes.items():
             full_id = escape_id(node_id)
+            is_last = (node_id == last_node_id)
 
             if isinstance(node, NodeIf):
-                if node.func.__module__ == "__main__":
-                    func_label = node.func.__name__
-                elif node.func.__name__ == "<lambda>":
+                func_label = node.func.__name__ if node.func.__module__ == "__main__" else f"{node.func.__module__}.{node.func.__name__}"
+                if node.func.__name__ == "<lambda>":
                     func_label = "lambda"
-                else:
-                    func_label = f"{node.func.__module__}.{node.func.__name__}"
-                # IF block as dashed cluster without label
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
                 dot_lines.append('    style=dashed;')
-
-                # IF node in diamond with small function text
                 dot_lines.append(f'    "{full_id}" [shape=diamond, label=< <B>{node_id}</B><BR/><FONT POINT-SIZE="10">{func_label}</FONT> >];')
-
-                # inline true_pipeline + false_pipeline inside the IF cluster
                 dot_lines.append(node.true_pipeline.to_dot(None, _prefix=full_id + "_T_"))
                 dot_lines.append(node.false_pipeline.to_dot(None, _prefix=full_id + "_F_"))
-
-                # Draw edges from IF block to entry nodes of true/false pipelines
                 true_first = node.true_pipeline.static_order()[0]
                 false_first = node.false_pipeline.static_order()[0]
                 true_last = node.true_pipeline.static_order()[-1]
                 false_last = node.false_pipeline.static_order()[-1]
-
                 dot_lines.append(f'    "{full_id}" -> "{full_id}_T_{true_first}" [label="True", tailport=s];')
                 dot_lines.append(f'    "{full_id}" -> "{full_id}_F_{false_first}" [label="False", tailport=s];')
-                
                 dot_lines.append(f'    "{full_id}_output" [shape=diamond, label=< <FONT POINT-SIZE="10"> If Output</FONT> >];')
                 dot_lines.append(f'    "{full_id}_T_{true_last}" -> "{full_id}_output" [tailport=s];')
                 dot_lines.append(f'    "{full_id}_F_{false_last}" -> "{full_id}_output" [tailport=s];')
-
-                dot_lines.append('  }')  # close cluster
-
+                dot_lines.append('  }')
             elif isinstance(node, Pipeline):
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
                 dot_lines.append(f'    label="SubPipeline: {node.name}"; style=filled; color=lightgrey;')
@@ -311,34 +306,43 @@ class Pipeline:
                 func_module = node.func.__module__
                 func_name = node.func.__name__
                 func_label = f"{func_module}.{func_name}" if func_module != '__main__' else func_name
-                dot_lines.append(f'  "{full_id}" [shape=box, label=< <B>{node_id}</B><BR/><FONT POINT-SIZE="10">{func_label}</FONT> >];')
+                shape = "doubleoctagon" if is_last and _prefix == "" else "box"
+                dot_lines.append(f'  "{full_id}" [shape={shape}, label=< <B>{node_id}</B><BR/><FONT POINT-SIZE="10">{func_label}</FONT> >];')
+                if (param_keys := list(node.get_fixed_params().keys())) != []:
+                    dot_lines[-1] = dot_lines[-1][:-3] + f'<BR/><FONT POINT-SIZE="8"><I>({", ".join(param_keys)})</I></FONT> >];'
+                    
 
-        # Connections
         for to_id, deps in self.node_dependencies.items():
             for input_name, from_id in deps.items():
-                if from_id.startswith("run_params:"):
-                    continue
                 from_label = escape_id(from_id)
                 to_label = escape_id(to_id)
-                if isinstance(self.nodes[to_id], NodeIf) and input_name.startswith("condition_func:"):
-                    dot_lines.append(f'  "{from_label}" -> "{to_label}" [label="{input_name[15:]}", tailport=s, headport=w, arrowhead=normal];')
+                label_text = f"{input_name}"
+                if from_id.startswith("run_params:"):
+                    if _prefix != "":
+                        continue
+                    input_label = input_name.split(":")[-1]
+                    dot_lines.append(f'  {{ rank=source; \"params_{input_label}\"; }}')
+                    dot_lines.append(f'  "params_{input_label}" [shape=ellipse, style=dashed, label=< <FONT POINT-SIZE="10">{input_label}</FONT> >];')
+                    dot_lines.append(f'  "params_{input_label}" -> "{to_label}" [label="{input_label}", fontsize=10, style=dashed];')
                 elif isinstance(self.nodes[from_id], NodeIf):
-                    dot_lines.append(f'  "{from_label}_output" -> "{to_label}" [label="{input_name}"];')
+                    dot_lines.append(f'  "{from_label}_output" -> "{to_label}" [label="{label_text}", fontsize=9];')
+                elif isinstance(self.nodes[to_id], NodeIf) and input_name.startswith("condition_func:"):
+                    dot_lines.append(f'  "{from_label}" -> "{to_label}" [label="{label_text[15:]}", fontsize=9, headport=w];')
                 else:
-                    dot_lines.append(f'  "{from_label}" -> "{to_label}" [label="{input_name}"];')
+                    dot_lines.append(f'  "{from_label}" -> "{to_label}" [label="{label_text}", fontsize=9];')
 
-        if is_top:
-            dot_lines.append("}")
-            dot_str = "\n".join(dot_lines)
+        dot_lines.append("}")
+        dot_str = "\n".join(dot_lines)
+        if filepath is not None:
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(dot_str)
-
-            if generate_png:
-                if png_filepath is None:
-                    png_filepath = os.path.splitext(filepath)[0] + ".png"
-                os.system(f'dot -Tpng -Gdpi=200 "{filepath}" -o "{png_filepath}"')
-        else:
-            return "\n".join(dot_lines)
+        if generate_png:
+            if png_filepath is None:
+                png_filepath = os.path.splitext(filepath)[0] + ".png"
+            os.system(f'dot -Tpng -Gdpi={dpi} "{filepath}" -o "{png_filepath}"')
+            if cleanup_dot:
+                os.remove(filepath)
+        return "\n".join(dot_lines)
 
     def to_json(self, filepath):
         """
