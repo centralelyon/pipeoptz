@@ -70,9 +70,10 @@ class Node:
                 current_input_hash = None
         try:
             if not memory:
-                return self.func(**self.fixed_params, **inputs)
+                # Prioritize runtime inputs over fixed_params in case of a name collision
+                return self.func(**{**self.fixed_params, **inputs})
             elif self.output is None or current_input_hash is None or current_input_hash != self.input_hash_last_exec:
-                self.output = self.func(**self.fixed_params, **inputs)
+                self.output = self.func(**{**self.fixed_params, **inputs})
                 self.input_hash_last_exec = current_input_hash
             return self.output
         except Exception as e:

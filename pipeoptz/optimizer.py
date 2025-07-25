@@ -248,7 +248,7 @@ class PipelineOptimizer:
         best_loss = current_loss
 
         temperature = initial_temp
-        loss_log = [best_loss]
+        loss_log = []
 
         for i in range(iterations):
             print(f"Iteration {i+1}/{iterations}", end="\r") if verbose else None
@@ -406,7 +406,7 @@ class PipelineOptimizer:
             print(f"Generation {gen+1}/{generations}", end="\r") if verbose else None
             new_population = []
             evaluated.sort(key=lambda x: x[1])
-            parents = [ind for ind, _ in evaluated[:population_size//2]]
+            parents = [ind for ind, _ in evaluated[:max(population_size//2,2)]]
 
             while len(new_population) < population_size:
                 if rd.random() < crossover_rate:
@@ -596,7 +596,7 @@ class PipelineOptimizer:
         best_idx = np.argmin(Y)
         best_x = X_raw[best_idx]
         best_loss = Y[best_idx]
-        loss_log = [best_loss]
+        loss_log = []
 
         for i in range(iterations):
             print(f"Iteration {i+1}/{iterations}", end="\r") if verbose else None
