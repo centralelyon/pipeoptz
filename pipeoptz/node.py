@@ -218,12 +218,15 @@ class NodeIf(Node):
     def set_fixed_param(self, key, value):
         """
         Sets a single fixed parameter on the NodeIf or its sub-pipelines.
+        For sub-pipelines, the key should be 'true_pipeline' or 'false_pipeline'
+        and the value should be a dictionary of parameters.
         """
         if key == "true_pipeline":
-            self.true_pipeline.set_fixed_param(value)
+            self.true_pipeline.set_fixed_params(value)
         elif key == "false_pipeline":
-            self.false_pipeline.set_fixed_param(value)
+            self.false_pipeline.set_fixed_params(value)
         else:
-            if key in self.fixed_params:
+            if key not in self.fixed_params:
                 raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
             self.fixed_params[key] = value
+        self.clear_memory()
