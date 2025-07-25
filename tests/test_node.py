@@ -7,36 +7,48 @@ sys.path.append(os.path.abspath("../"))
 from pipeoptz.node import Node, NodeIf
 from pipeoptz.pipeline import Pipeline
 
+
 @pytest.fixture
 def simple_add_func():
-    """Une fonction simple qui additionne deux nombres."""
+    """
+    A simple function that adds two numbers.
+    """
     return lambda a, b: a + b
 
 @pytest.fixture
 def mock_func_with_call_tracker():
-    """Une fonction mock qui suit ses appels."""
+    """
+    A mock function that tracks its calls.
+    """
     mock = Mock(return_value="computed")
     return mock
 
 @pytest.fixture
 def true_pipeline():
-    """Un pipeline simple pour le chemin 'true' de NodeIf."""
+    """
+    A simple pipeline for the 'true' path of NodeIf.
+    """
     p = Pipeline(name="true_path")
     p.add_node(Node(id="true_node", func=lambda x: f"true_{x}"), predecessors={'x': 'run_params:input'})
     return p
 
 @pytest.fixture
 def false_pipeline():
-    """Un pipeline simple pour le chemin 'false' de NodeIf."""
+    """
+    A simple pipeline for the 'false' path of NodeIf.
+    """
     p = Pipeline(name="false_path")
     p.add_node(Node(id="false_node", func=lambda x: f"false_{x}"), predecessors={'x': 'run_params:input'})
     return p
+
 
 # --- Tests pour la classe Node ---
 
 class TestNode:
     def test_node_initialization(self, simple_add_func):
-        """Teste si un Node est initialisé correctement."""
+        """
+        Tests if a Node is initialized correctly.
+        """
         node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
         assert node.id == "add_node"
         assert node.func == simple_add_func
@@ -45,24 +57,32 @@ class TestNode:
         assert node.input_hash_last_exec is None
 
     def test_get_id(self, simple_add_func):
-        """Teste la méthode get_id."""
+        """
+        Tests the get_id method.
+        """
         node = Node(id="test_id", func=simple_add_func)
         assert node.get_id() == "test_id"
 
     def test_execute_simple(self, simple_add_func):
-        """Teste l'exécution de base sans paramètres fixes."""
+        """
+        Tests that the basic execution without fixed parameters works correctly.
+        """
         node = Node(id="add_node", func=simple_add_func)
         result = node.execute(inputs={'a': 5, 'b': 10})
         assert result == 15
 
     def test_execute_with_fixed_params(self, simple_add_func):
-        """Teste l'exécution avec un mélange de paramètres fixes et d'exécution."""
+        """
+        Tests execution with a mix of fixed and runtime parameters.
+        """
         node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
         result = node.execute(inputs={'b': 9})
         assert result == 10
 
     def test_execute_raises_exception(self):
-        """Teste que les exceptions de la fonction encapsulée sont propagées."""
+        """
+        Tests that exceptions from the wrapped function are propagated.
+        """
         def error_func():
             raise ValueError("Test error")
         
@@ -71,7 +91,9 @@ class TestNode:
             node.execute()
 
     def test_memory_caching_avoids_recomputation(self, mock_func_with_call_tracker):
-        """Teste que memory=True empêche la ré-exécution avec les mêmes entrées."""
+        """
+        Tests that memory=True prevents re-execution with the same inputs.
+        """
         node = Node(id="cache_node", func=mock_func_with_call_tracker)
         
         # Première exécution
@@ -87,7 +109,9 @@ class TestNode:
         assert mock_func_with_call_tracker.call_count == 1
 
     def test_memory_caching_recomputes_on_new_input(self, mock_func_with_call_tracker):
-        """Teste que memory=True ré-exécute avec des entrées différentes."""
+        """
+        Tests that memory=True re-executes with different inputs.
+        """
         node = Node(id="cache_node", func=mock_func_with_call_tracker)
         
         # Première exécution
@@ -100,7 +124,9 @@ class TestNode:
         assert mock_func_with_call_tracker.call_count == 2
 
     def test_memory_caching_with_numpy_array(self):
-        """Teste la mise en cache avec des tableaux numpy en entrée."""
+        """
+        Tests caching with numpy arrays as input.
+        """
         call_count = 0
         def numpy_func(arr):
             nonlocal call_count
@@ -128,7 +154,9 @@ class TestNode:
         assert call_count == 2
 
     def test_clear_memory(self, mock_func_with_call_tracker):
-        """Teste que clear_memory force la ré-exécution."""
+        """
+        Tests that clear_memory forces re-execution.
+        """
         node = Node(id="cache_node", func=mock_func_with_call_tracker)
         
         node.execute(inputs={'x': 1}, memory=True)
@@ -143,19 +171,25 @@ class TestNode:
         assert mock_func_with_call_tracker.call_count == 2
 
     def test_set_fixed_param(self, simple_add_func):
-        """Teste la définition d'un seul paramètre fixe."""
+        """
+        Tests setting a single fixed parameter.
+        """
         node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
         node.set_fixed_param('a', 5)
         assert node.get_fixed_params()['a'] == 5
 
     def test_set_fixed_param_raises_error_for_new_key(self, simple_add_func):
-        """Teste que la définition d'un paramètre fixe non existant lève une ValueError."""
+        """
+        Tests that setting a non-existent fixed parameter raises a ValueError.
+        """
         node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
         with pytest.raises(ValueError, match="Key 'b' is not a fixed parameter of node 'add_node'"):
             node.set_fixed_param('b', 10)
 
     def test_is_fixed_param(self, simple_add_func):
-        """Teste la méthode is_fixed_param."""
+        """
+        Tests the is_fixed_param method.
+        """
         node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
         assert node.is_fixed_param('a') is True
         assert node.is_fixed_param('b') is False
@@ -165,7 +199,9 @@ class TestNode:
 
 class TestNodeIf:
     def test_nodeif_initialization(self, true_pipeline, false_pipeline):
-        """Teste si un NodeIf est initialisé correctement."""
+        """
+        Tests if a NodeIf is initialized correctly.
+        """
         cond_func = lambda x: x > 0
         node_if = NodeIf(
             id="if_node",
@@ -181,7 +217,9 @@ class TestNodeIf:
         assert node_if.fixed_params == {'y': 1}
 
     def test_execute_true_path(self, true_pipeline, false_pipeline):
-        """Teste que le pipeline 'true' est exécuté si la condition est vraie."""
+        """
+        Tests that the 'true' pipeline is executed if the condition is true.
+        """
         cond_func = lambda val: val > 10
         node_if = NodeIf(
             id="if_node",
@@ -196,7 +234,9 @@ class TestNodeIf:
         assert result == "true_world"
 
     def test_execute_false_path(self, true_pipeline, false_pipeline):
-        """Teste que le pipeline 'false' est exécuté si la condition est fausse."""
+        """
+        Tests that the 'false' pipeline is executed if the condition is false.
+        """
         cond_func = lambda val: val > 10
         node_if = NodeIf(
             id="if_node",
@@ -211,7 +251,9 @@ class TestNodeIf:
         assert result == "false_space"
 
     def test_get_fixed_params_nested(self, true_pipeline, false_pipeline):
-        """Teste la récupération des paramètres fixes de NodeIf et de ses sous-pipelines."""
+        """
+        Tests retrieving fixed parameters from NodeIf and its sub-pipelines.
+        """
         true_pipeline.get_node("true_node").fixed_params = {'z': 100}
         
         node_if = NodeIf(
@@ -232,7 +274,9 @@ class TestNodeIf:
         assert params == expected_params
 
     def test_set_fixed_params_nested(self, true_pipeline, false_pipeline):
-        """Teste la définition des paramètres fixes sur NodeIf et ses sous-pipelines."""
+        """
+        Tests setting fixed parameters on NodeIf and its sub-pipelines.
+        """
         true_pipeline.get_node("true_node").fixed_params = {'z': 0}
         false_pipeline.get_node("false_node").fixed_params = {'w': 0}
 
