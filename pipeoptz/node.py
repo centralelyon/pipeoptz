@@ -15,7 +15,7 @@ class Node:
         input_hash_last_exec: Caches the hash of the inputs from the last execution,
             used for memory optimization.
     """
-    def __init__(self, id, func, fixed_params={}):
+    def __init__(self, id, func, fixed_params=None):
         """
         Initializes a Node.
 
@@ -23,11 +23,11 @@ class Node:
             id (str): The unique identifier for the node.
             func (callable): The function this node will execute.
             fixed_params (dict, optional): A dictionary of keyword arguments that will be
-                passed to the function on every execution. Defaults to {}.
+                passed to the function on every execution. Defaults to None.
         """
         self.id = id
         self.func = func
-        self.fixed_params = fixed_params
+        self.fixed_params = fixed_params if fixed_params is not None else {}
         self.output = None
         self.input_hash_last_exec = None
 
@@ -37,8 +37,6 @@ class Node:
 
     def clear_memory(self):
         """Clears the cached output and input hash."""
-        del self.output
-        del self.input_hash_last_exec
         self.output = None
         self.input_hash_last_exec = None
 
@@ -101,7 +99,11 @@ class Node:
         for key, value in fixed_params.items():
             if not isinstance(key, str):
                 raise ValueError(f"Key '{key}' is not a string.")
-            self.set_fixed_param(key, value)
+            if key not in self.fixed_params:
+                raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
+            self.fixed_params[key] = value
+        # Clear memory once after all params are set for efficiency
+        self.clear_memory()
 
     def set_fixed_param(self, key, value):
         """
@@ -137,12 +139,12 @@ class NodeIf(Node):
         true_pipeline (Pipeline): The pipeline to execute if the condition is True.
         false_pipeline (Pipeline): The pipeline to execute if the condition is False.
     """
-    def __init__(self, id, condition_func, true_pipeline, false_pipeline, fixed_params={}):
-        super().__init__(id, condition_func, fixed_params)
+    def __init__(self, id, condition_func, true_pipeline, false_pipeline, fixed_params=None):
+        super().__init__(id, condition_func, fixed_params=fixed_params)
         self.true_pipeline = true_pipeline
         self.false_pipeline = false_pipeline
-        self.skip_failed_images=False, 
-        self.debug=False
+        self.skip_failed_images = False
+        self.debug = False
     
     def set_run_params(self, skip_failed_images=False, debug=False):
         """
@@ -213,7 +215,11 @@ class NodeIf(Node):
             elif key == "false_pipeline":
                 self.false_pipeline.set_fixed_params(value)
             else:
+                # Reuse the validation logic from set_fixed_param
+                if key not in self.fixed_params:
+                    raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
                 self.fixed_params[key] = value
+        self.clear_memory()
     
     def set_fixed_param(self, key, value):
         """
