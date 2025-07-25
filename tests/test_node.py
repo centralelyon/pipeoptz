@@ -42,7 +42,7 @@ def false_pipeline():
     return p
 
 
-# --- Tests pour la classe Node ---
+# --- Class Node tests ---
 
 class TestNode:
     def test_node_initialization(self, simple_add_func):
@@ -96,16 +96,13 @@ class TestNode:
         """
         node = Node(id="cache_node", func=mock_func_with_call_tracker)
         
-        # Première exécution
         result1 = node.execute(inputs={'x': 1}, memory=True)
         assert result1 == "computed"
         assert mock_func_with_call_tracker.call_count == 1
         assert node.output == "computed"
 
-        # Seconde exécution avec les mêmes entrées
         result2 = node.execute(inputs={'x': 1}, memory=True)
         assert result2 == "computed"
-        # Le compteur d'appels ne doit PAS augmenter
         assert mock_func_with_call_tracker.call_count == 1
 
     def test_memory_caching_recomputes_on_new_input(self, mock_func_with_call_tracker):
@@ -113,14 +110,9 @@ class TestNode:
         Tests that memory=True re-executes with different inputs.
         """
         node = Node(id="cache_node", func=mock_func_with_call_tracker)
-        
-        # Première exécution
         node.execute(inputs={'x': 1}, memory=True)
         assert mock_func_with_call_tracker.call_count == 1
-
-        # Seconde exécution avec des entrées différentes
         node.execute(inputs={'x': 2}, memory=True)
-        # Le compteur d'appels DOIT augmenter
         assert mock_func_with_call_tracker.call_count == 2
 
     def test_memory_caching_with_numpy_array(self):
@@ -147,7 +139,7 @@ class TestNode:
 
         res3 = node.execute(inputs={'arr': np.array([1, 2, 3])}, memory=True)
         assert res3 == 6
-        assert call_count == 1 # Le hash doit être le même
+        assert call_count == 1
 
         res4 = node.execute(inputs={'arr': arr2}, memory=True)
         assert res4 == 15
@@ -167,7 +159,6 @@ class TestNode:
         assert node.input_hash_last_exec is None
 
         node.execute(inputs={'x': 1}, memory=True)
-        # Le compteur d'appels doit augmenter car la mémoire a été vidée
         assert mock_func_with_call_tracker.call_count == 2
 
     def test_set_fixed_param(self, simple_add_func):
@@ -195,7 +186,7 @@ class TestNode:
         assert node.is_fixed_param('b') is False
 
 
-# --- Tests pour la classe NodeIf ---
+# --- Class NodeIf tests ---
 
 class TestNodeIf:
     def test_nodeif_initialization(self, true_pipeline, false_pipeline):

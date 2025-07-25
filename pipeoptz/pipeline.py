@@ -138,7 +138,7 @@ class Pipeline:
             raise ValueError("The graph contains a cycle, topological sort is impossible.")
         return topological_order
 
-    def run(self, run_params={}, optimize_memory=True, skip_failed_images=False, debug=False):
+    def run(self, run_params={}, optimize_memory=False, skip_failed_images=False, debug=False):
         """
         Executes the entire pipeline from start to finish.
 
@@ -213,7 +213,6 @@ class Pipeline:
                 for p in product(*multiple_inputs.values()):
                     try:
                         print(f"Executing node: {node_id} with parameters {dict(zip(multiple_inputs.keys(), p))}", end="\r") if debug else None
-                        node_outputs[node_id].append(node.execute({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, memory=False))
                         node_outputs[node_id].append(node.execute({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, memory=False) if node_id[0]+node_id[-1] != "[]" \
                                         else node.run({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, optimize_memory, skip_failed_images, debug))
                     except Exception as e:
@@ -481,7 +480,3 @@ class Pipeline:
             return pipeline_instance
 
         return build_pipeline(pipeline_def)
-
-
-
-
