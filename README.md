@@ -1,7 +1,7 @@
 # PipeOptz: Pipeline Optimization Framework
 
 [![PyPI version](https://badge.fury.io/py/pipeoptz.svg)](https://badge.fury.io/py/pipeoptz)
-[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/release/python-390/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/release/python-390/)
 
 **PipeOptz** is a Python library for optimizing the parameters of processing pipelines. It is particularly suited for tasks in image processing, but its generic design allows it to be applied to any domain where a sequence of operations needs to be tuned to achieve an optimal result.
 
@@ -100,15 +100,15 @@ pipeline.add_node(
     predecessors={'image': 'blur'}
 )
 
-index, history, times = pipeline.run({'image':numpy_image})
+node_id, history, times = pipeline.run({'image':numpy_image})
 
 print("Execution time :", times[0])
-plt.imshow(history[index])
+plt.imshow(history[node_id])
 ```
 
 The pipeline output is a tuple of three elements:
-- `index`: The output of the last executed node in the pipeline. It is this node whose will be used as the input for the loss function.
-- `history`: A dictionary containing the outputs of all final nodes in the pipeline, keyed by their `id`. If `optimize_memory=False` (`True` by default) the history will contain the output of all nodes.
+- `id`: The output of the last executed node in the pipeline. It is this node whose will be used as the input for the loss function.
+- `history`: A dictionary containing the outputs of all nodes in the pipeline, keyed by their `id`. If `optimize_memory=True` (`False` by default) the history will contain the output only of the output nodes.
 - `times`: A tuple containing the global pipeline execution time and a dictionary containing the execution time of each node, keyed by their `id`.
 
 You can save the pipeline to re-use it later in a JSON format or visualize the pipeline using GraphViz and generate a .DOT file.
