@@ -771,3 +771,38 @@ def find_circle(image: np.ndarray, min_radius_denominator: int = 4,
         circles = np.uint16(np.around(circles))
         return circles[0, :] # Return the array of (x, y, radius)
     return None
+
+def iou_loss(image_a, image_b):
+    """
+    Calculates the Intersection over Union (IoU) loss between two images.
+    IoU is defined as the area of intersection divided by the area of union.
+    The loss is 1 - IoU, so a perfect match yields 0 loss.
+
+    Args:
+        image_a (np.ndarray): First image (2D or RGBA).
+        image_b (np.ndarray): Second image (2D or RGBA).
+
+    Returns:
+        float: The IoU loss (1 - IoU).
+    """
+    if image_a is None or image_b is None:
+        return 1.0 # If either is None, consider it a complete mismatch
+    if image_a.shape != image_b.shape:
+        raise ValueError("Input masks must have the same shape.")
+    if len(image_a.shape) == 2:
+        fa = image_a.astype(bool)
+        fb = image_b.astype(bool)
+    elif image_a.shape[2] == 4:
+        fa = image_a[:,:,3].astype(bool)
+        fb = image_b[:,:,3].astype(bool)
+    else:
+        raise ValueError("Input images must be 2D or 4-channel (RGBA) for IoU calculation.")
+
+    intersection = np.sum(np.logical_and(fa, fb))
+    union = np.sum(np.logical_or(fa, fb))
+
+    if union == 0:
+        return 1.0 # Both masks are empty, so IoU is 0, loss is 1.0
+    
+    iou = intersection / union
+    return 1.0 - iou

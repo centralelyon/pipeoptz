@@ -41,6 +41,21 @@ These objects define the search space for the optimization. They specify which n
 ### `PipelineOptimizer`
 This is the main engine for the optimization process. It takes the `Pipeline`, a `loss_function` to minimize, and the `Parameter` objects to tune. It provides a simple interface to run various optimization algorithms.
 
+## Utility Functions (`utils.py`)
+
+The `pipeoptz.utils` module provides a collection of helper functions commonly used in image processing pipelines. These can be used directly within your `Node` functions or in the optimizer as a loss function.
+
+Some of the available functions include:
+
+- **Image Manipulation**: `rotate`, `min_size` (crop to content), `remove_alpha`.
+- **Color Operations**: `extract_palette`, `recolor`, `remove_color`.
+- **Feature Detection**: `find_circle`, `find_line` using Hough Transforms.
+- **Segmentation & Analysis**: `isolate` (find connected components), `slic` (superpixel segmentation), `get_pos` (get bounding box).
+- **Loss Functions**: A ready-to-use `mse_loss` (Mean Squared Error), which is useful for the `loss_function` argument of the `PipelineOptimizer`.
+- **Geometric Helpers**: `get_angle_min_area` to find the optimal rotation for an object.
+
+These utilities are designed to speed up the process of building complex image analysis workflows.
+
 ## Installation
 
 Currently, PipeOptz is not yet available on PyPI. You can install it directly from the source code:
