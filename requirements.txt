@@ -1,4 +1,4 @@
 numpy
 scipy
-cv2
+opencv-python
 scikit-learn
