@@ -2,3 +2,4 @@ numpy
 scipy
 opencv-python
 scikit-learn
+Pillow
