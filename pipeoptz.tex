@@ -1,0 +1,247 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+
+\geometry{margin=2.5cm}
+
+\definecolor{lightgray}{gray}{0.95}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+
+\lstset{
+    backgroundcolor=\color{lightgray},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    captionpos=b,
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    stringstyle=\color{codepurple},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    showstringspaces=false
+}
+
+\title{Modeling an Optimizable Processing Pipeline}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document describes the modeling of a processing pipeline using the PipeOptz framework. The system is designed to allow users to construct workflows by combining processing steps (nodes) into a Directed Acyclic Graph (DAG). It provides a structure for creating, executing, and tuning these workflows, particularly for image processing.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+The primary goal of the PipeOptz framework is to provide a modular library for building and optimizing processing workflows. Users can define independent processing steps as \textbf{Nodes}, connect them to form a \textbf{Pipeline}, and then use the \textbf{PipelineOptimizer} to tune their parameters automatically. This architecture separates the logic of individual tasks from the overall workflow structure.
+
+\section{Core Concepts}
+The framework is built upon 4 components:
+
+\begin{itemize}
+    \item \textbf{Node:} The basic building block. A node is a wrapper around a Python function that performs a single, atomic task. It has a unique ID and a set of fixed parameters.
+    
+    \item \textbf{Pipeline:} A container for a collection of nodes and their dependencies, forming a DAG. It manages the execution order and the flow of data between nodes.
+    
+    \item \textbf{Parameter:} An object that defines the search space for a tunable parameter within a node. Subclasses like \texttt{IntParameter} or \texttt{ChoiceParameter} allow the optimizer to know the valid range of values for a given parameter.
+    
+    \item \textbf{PipelineOptimizer:} The engine that runs metaheuristic algorithms (e.g., Genetic Algorithm, Bayesian Optimization) to find the optimal set of tunable parameters that minimize a given loss function.
+\end{itemize}
+
+\section{The Pipeline: Defining Connections}
+\texttt{predecessors} dictionary in the \texttt{pipeline.add\_node()} method.
+
+\subsection{Basic Connections}
+A standard connection maps the output of a source node (predecessor) to a named input parameter of the target node.
+
+\begin{lstlisting}[language=python, caption={Basic node connection}]
+# The output of 'node_A' becomes the 'image_input' for 'node_B'
+pipeline.add_node(
+    Node(id='node_B', func=my_func),
+    predecessors={'image_input': 'node_A'}
+)
+\end{lstlisting}
+
+\subsection{Runtime Inputs}
+To provide input to the pipeline when it starts, use the \texttt{run\_params:} prefix. The value will be taken from the dictionary passed to the \texttt{pipeline.run()} method.
+
+\begin{lstlisting}[language=python, caption={Providing a runtime input}]
+# 'image' input for 'blur_node' comes from runtime parameters
+pipeline.add_node(
+    Node(id='blur_node', func=gaussian_blur),
+    predecessors={'image': 'run_params:source_image'}
+)
+
+# Execute the pipeline with the required runtime parameter
+pipeline.run(run_params={'source_image': my_image_data})
+\end{lstlisting}
+
+\subsection{Advanced Structures and Connections}
+The pipeline also supports more complex workflow patterns like conditional logic, nested pipelines, and loops.
+
+\subsubsection{Conditional Execution with \texttt{NodeIf}}
+A \texttt{NodeIf} allows for branching logic. It contains a condition function and two sub-pipelines: one for \texttt{True} and one for \texttt{False}. Inputs for the condition function are specified with the \texttt{condition\_func:} prefix.
+
+\begin{lstlisting}[language=python, caption={Using NodeIf for conditional logic}]
+# An 'if' node that checks an image's size
+if_node = NodeIf(
+    id='check_size',
+    condition_func=is_large_image,
+    true_pipeline=large_image_pipeline,
+    false_pipeline=small_image_pipeline
+)
+
+# Wire the runtime image to the condition function's 'img' parameter
+pipeline.add_node(if_node, predecessors={
+    'condition_func:img': 'run_params:source_image'
+})
+\end{lstlisting}
+
+\subsubsection{Nested Pipelines (Sub-Pipelines)}
+To create modular and reusable workflows, an entire \texttt{Pipeline} object can be added as a node to a parent pipeline. This promotes hierarchical design.
+
+\begin{lstlisting}[language=python, caption={Adding a pipeline as a sub-pipeline}]
+# 'preprocessing_pipeline' is a complete Pipeline object
+main_pipeline.add_node(
+    preprocessing_pipeline,
+    predecessors={'input_image': 'run_params:raw_image'}
+)
+\end{lstlisting}
+
+\subsubsection{Iteration (Loops)}
+To execute a node for each element in a list produced by a predecessor, wrap the target input parameter name in square brackets \texttt{[]}. Like that you don't need to create a map manually.
+
+\begin{lstlisting}[language=python, caption={Iterating over a list of elements}]
+# 'isolate_objects' node outputs a list of image masks
+pipeline.add_node(Node(id='isolate_objects', ...))
+
+# 'process_mask' node will be executed for each mask in the list
+pipeline.add_node(
+    Node(id='process_mask', func=process_one_mask),
+    predecessors={'[mask]': 'isolate_objects'}
+)
+\end{lstlisting}
+
+\subsubsection{Combinatorial Execution (Product)}
+To execute a node over the Cartesian product of multiple input lists, wrap the target input parameter name in curly braces \texttt{{}}.
+
+\begin{lstlisting}[language=python, caption={Combinatorial execution}]
+# 'get_kernels' outputs [[3,3], [5,5]]
+# 'get_sigmas' outputs [1.0, 1.5]
+pipeline.add_node(Node(id='get_kernels', ...))
+pipeline.add_node(Node(id='get_sigmas', ...))
+
+# 'apply_blur' will run 4 times with all combinations:
+# (k=(3,3), sigma=1.0), (k=(3,3), sigma=1.5), etc.
+pipeline.add_node(
+    Node(id='apply_blur', func=gaussian_blur),
+    predecessors={
+        '{k}': 'get_kernels',
+        '{sigma}': 'get_sigmas'
+    }
+)
+\end{lstlisting}
+
+\newpage
+\section{Serialization with JSON}
+To ensure persistence, interoperability, and reusability, pipelines can be serialized to and from a JSON format. The \texttt{pipeline.to\_json()} and \texttt{Pipeline.from\_json()} methods handle this process.
+
+\subsection{High-Level JSON Structure}
+The root of a serialized pipeline is a JSON object with four main keys:
+\begin{itemize}
+    \item \texttt{name}: The string name of the pipeline.
+    \item \texttt{description}: A string description.
+    \item \texttt{nodes}: An array of node objects, ordered topologically.
+    \item \texttt{edges}: An array of edge objects defining the connections.
+\end{itemize}
+
+\subsection{The \texttt{nodes} Array}
+Each object in the \texttt{nodes} array represents a node or a complex structure.
+
+\subsubsection{Standard \texttt{Node}}
+A standard node is defined by its ID, its function (as a string), and its fixed parameters.
+\begin{lstlisting}[caption={JSON for a standard Node}]
+{
+  "id": "blur_image",
+  "type": "pipeoptz.utils.gaussian_blur",
+  "fixed_params": { "k": 5, "sigma": 1.5 }
+}
+\end{lstlisting}
+The \texttt{type} field is a string that \texttt{from\_json} resolves to a callable Python function.
+
+\subsubsection{\texttt{NodeIf}}
+A conditional node has a special type and recursively contains its true and false sub-pipelines.
+\begin{lstlisting}[caption={JSON for a NodeIf}]
+{
+  "id": "conditional_branch",
+  "type": "NodeIf",
+  "condition_type": "my_module.my_condition_func",
+  "fixed_params": {},
+  "true_pipeline": {
+    "name": "true_branch",
+    "description": "",
+    "nodes": [ ... ],
+    "edges": [ ... ]
+  },
+  "false_pipeline": {
+    "name": "false_branch",
+    "description": "",
+    "nodes": [ ... ],
+    "edges": [ ... ]
+  }
+}
+\end{lstlisting}
+
+\subsubsection{Sub-Pipeline}
+A nested pipeline is also represented with a special type and a recursive definition.
+\begin{lstlisting}[caption={JSON for a Sub-Pipeline}]
+{
+  "id": "preprocessing_steps",
+  "type": "SubPipeline",
+  "pipeline": {
+    "name": "preprocessing_pipeline",
+    "description": "Applies blur and threshold.",
+    "nodes": [ ... ],
+    "edges": [ ... ]
+  }
+}
+\end{lstlisting}
+
+\subsection{The \texttt{edges} Array}
+The \texttt{edges} array defines the DAG structure. Each edge object is a simple, declarative link. The DSL syntax (e.g., brackets for loops) is stored in the \texttt{to\_input} field.
+
+\begin{lstlisting}[caption={JSON for an Edge}]
+{
+  "from_node": "source_node_id",
+  "to_node": "target_node_id",
+  "to_input": "target_parameter_name"
+}
+\end{lstlisting}
+
+Example for an iterative connection:
+\begin{lstlisting}[caption={JSON for an Iterative Edge}]
+{
+  "from_node": "isolate_objects",
+  "to_node": "process_mask",
+  "to_input": "[mask]"
+}
+\end{lstlisting}
+
+\subsection{Function Resolution}
+When loading a pipeline from JSON, the framework uses a resolver to convert the function path strings (e.g., \texttt{"pipeoptz.utils.gaussian\_blur"}) back into actual Python functions. This is done via dynamic module importing, allowing the framework to reconstruct the exact pipeline if all the functions nodes can be accessible (by importating a library or by hard coding in the current file).
+
+\end{document}
