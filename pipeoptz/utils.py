@@ -5,15 +5,17 @@ from math import comb
 from sklearn.cluster import KMeans
 from scipy.spatial import ConvexHull
 from scipy.ndimage import label, rotate as _rotate
+import pytesseract
+from typing import Tuple, List
 
-def _height_width_ratio(points, angle_rad):
+def _height_width_ratio(points: np.ndarray, angle_rad: float) -> float:
             rotated = rotate_points(points, angle_rad)
             min_xy = rotated.min(axis=0)
             max_xy = rotated.max(axis=0)
             w, h = max_xy - min_xy
             return h / w if w != 0 else 0.0
 
-def get_pos(el: np.ndarray, bonus: int = 0) -> tuple[int, int, int, int]:
+def get_bounding_box(el: np.ndarray, bonus: int = 0) -> tuple[int, int, int, int]:
     """
     Calculates the bounding box coordinates of a binary mask.
 
@@ -154,7 +156,7 @@ def ith_subset(n: int, i: int) -> list[int]:
         x += 1
     return subset
 
-def mse_loss(image_a, image_b):
+def mse_loss(image_a: np.ndarray, image_b: np.ndarray) -> float:
     """Calculate the mean squared error (MSE) between two images."""
     if image_a is None or image_b is None:
         return float('inf')
@@ -772,7 +774,7 @@ def find_circle(image: np.ndarray, min_radius_denominator: int = 4,
         return circles[0, :] # Return the array of (x, y, radius)
     return None
 
-def iou_loss(image_a, image_b):
+def iou_loss(image_a: np.ndarray, image_b: np.ndarray) -> float:
     """
     Calculates the Intersection over Union (IoU) loss between two images.
     IoU is defined as the area of intersection divided by the area of union.
@@ -806,3 +808,19 @@ def iou_loss(image_a, image_b):
     
     iou = intersection / union
     return 1.0 - iou
+
+def OCR(image: np.ndarray, bb: Tuple[2, 2], lang=None) -> str:
+    """
+    Performs Optical Character Recognition (OCR) on a specified bounding box within an image.
+
+    Args:
+        image (np.ndarray): The input image.
+        bb (Tuple[2, 2]): A tuple representing the bounding box (x1, y1, x2, y2).
+
+    Returns:
+        str: The extracted text from the bounding box.
+    """
+    x1, y1, x2, y2 = bb
+    cropped_image = image[y1:y2, x1:x2]
+    text = pytesseract.image_to_string(cropped_image, lang=lang)
+    return text.strip()
