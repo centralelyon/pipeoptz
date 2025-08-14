@@ -2,7 +2,7 @@ import json
 import importlib
 import os, sys, time
 from collections import deque
-from .node import Node, NodeIf
+from .node import Node, NodeIf, NodeFor
 from .utils import product
 
 class Pipeline:
@@ -173,7 +173,7 @@ class Pipeline:
             if node_id not in self.nodes:
                 raise ValueError(f"The node with id: '{node_id}' was specified as a dependency but has not been added to the pipeline.")
             
-            if isinstance(self.nodes[node_id], NodeIf):
+            if isinstance(self.nodes[node_id], NodeIf) or isinstance(self.nodes[node_id], NodeFor):
                 self.nodes[node_id].set_run_params(skip_failed_images, debug)
             node = self.nodes[node_id]
             inputs = {}
@@ -296,6 +296,17 @@ class Pipeline:
                 dot_lines.append(f'    "{full_id}_T_{true_last}" -> "{full_id}_output" [tailport=s];')
                 dot_lines.append(f'    "{full_id}_F_{false_last}" -> "{full_id}_output" [tailport=s];')
                 dot_lines.append('  }')
+            elif isinstance(node, NodeFor):
+                dot_lines.append(f'  subgraph cluster_{full_id} {{')
+                dot_lines.append('    style=dashed;')
+                dot_lines.append(f'    label="For Loop: {node_id}";')
+                dot_lines.append(f'    "{full_id}" [shape=Mdiamond, label=< <B>{node_id}</B><BR/><FONT POINT-SIZE="10">For Loop</FONT> >];')
+                dot_lines.append(node.loop_pipeline.to_dot(None, _prefix=full_id + "_L_"))
+                loop_first = node.loop_pipeline.static_order()[0]
+                loop_last = node.loop_pipeline.static_order()[-1]
+                dot_lines.append(f'    "{full_id}" -> "{full_id}_L_{loop_first}" [label="start", tailport=s];')
+                dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}" [label="next"];')
+                dot_lines.append('  }')
             elif isinstance(node, Pipeline):
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
                 dot_lines.append(f'    label="SubPipeline: {node.name}"; style=filled; color=lightgrey;')
@@ -361,6 +372,13 @@ class Pipeline:
                     "condition_type": f"{node.func.__module__}.{node.func.__name__}",
                     "true_pipeline": serialize_pipeline(node.true_pipeline),
                     "false_pipeline": serialize_pipeline(node.false_pipeline),
+                    "fixed_params": node.fixed_params
+                }
+            elif isinstance(node, NodeFor):
+                return {
+                    "id": node.id,
+                    "type": "NodeFor",
+                    "loop_pipeline": serialize_pipeline(node.loop_pipeline),
                     "fixed_params": node.fixed_params
                 }
             elif isinstance(node, Pipeline):
@@ -465,6 +483,13 @@ class Pipeline:
                         condition_func=condition_func,
                         true_pipeline=true_pipeline,
                         false_pipeline=false_pipeline,
+                        fixed_params=fixed_params
+                    )
+                elif node_type == "NodeFor":
+                    loop_pipeline = build_pipeline(node_data["loop_pipeline"])
+                    node = NodeFor(
+                        id=node_id,
+                        loop_pipeline=loop_pipeline,
                         fixed_params=fixed_params
                     )
                 elif node_type == "SubPipeline":

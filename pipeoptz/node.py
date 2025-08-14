@@ -237,3 +237,124 @@ class NodeIf(Node):
                 raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
             self.fixed_params[key] = value
         self.clear_memory()
+
+class NodeFor(Node):
+    """
+    A node that executes a sub-pipeline for a given number of iterations.
+    It implements a 'for' loop behavior, where the output of one iteration
+    is the input for the next.
+
+    Attributes:
+        loop_pipeline (Pipeline): The pipeline to execute at each iteration.
+    """
+    def __init__(self, id, loop_pipeline, fixed_params=None):
+        """
+        Initializes a NodeFor.
+
+        Args:
+            id (str): The unique identifier for the node.
+            loop_pipeline (Pipeline): The pipeline to execute in a loop.
+            fixed_params (dict, optional): Fixed parameters for this node.
+        """
+        super().__init__(id, func=lambda **kwargs: kwargs, fixed_params=fixed_params)
+        self.loop_pipeline = loop_pipeline
+        self.skip_failed_images = False
+        self.debug = False
+
+    def set_run_params(self, skip_failed_images=False, debug=False):
+        """
+        Sets the run parameters for the sub-pipelines.
+
+        Args:
+            skip_failed_images (bool, optional): If True, execution will continue
+                even if one iteration fails.
+                Defaults to False.
+            debug (bool, optional): If True, enables debug printing for sub-pipelines.
+                Defaults to False.
+        """
+        self.skip_failed_images = skip_failed_images
+        self.debug = debug
+
+    def execute(self, inputs={}, memory=False):
+        """
+        Executes the loop. It requires an 'iterations' input for the number of loops,
+        and a 'loop_var' input for the initial value that will be passed from one
+        iteration to the next.
+
+        Args:
+            inputs (dict): Must contain 'iterations' (int) and 'loop_var' (any).
+            memory (bool): Enables caching within the sub-pipeline.
+
+        Returns:
+            The output of the final iteration.
+        """
+        iterations = inputs.get('iterations', self.fixed_params.get('iterations'))
+        if iterations is None:
+            raise ValueError("NodeFor requires an 'iterations' input in 'inputs' or in 'fixed_params'.")
+        
+        current_loop_var = inputs.get('loop_var')
+        if 'loop_var' not in inputs:
+            raise ValueError("NodeFor requires a 'loop_var' input for the initial value.")
+
+        for i in range(int(iterations)):
+            if self.debug:
+                print(f"\rExecuting node: {self.id} iteration {i+1}/{iterations}", end="")
+            
+            run_params = {'loop_var': current_loop_var, 'loop_index': i, **inputs, **self.fixed_params}
+
+            try:
+                last_node_id, hist, _ = self.loop_pipeline.run(
+                    run_params=run_params,
+                    optimize_memory=not memory,
+                    skip_failed_images=self.skip_failed_images,
+                    debug=self.debug
+                )
+                current_loop_var = hist[last_node_id]
+            except Exception as e:
+                if self.skip_failed_images:
+                    print(f"Error in node {self.id} at iteration {i+1}/{iterations}: {e}")
+                    continue
+                raise e
+        
+        if self.debug:
+            print()
+        
+        return current_loop_var
+
+    def get_fixed_params(self):
+        """
+        Gets the fixed parameters of the NodeFor and its sub-pipeline.
+        """
+        params = {**self.fixed_params, "loop_pipeline": self.loop_pipeline.get_fixed_params()}
+        params['iterations'] = self.iterations
+        return params
+    
+    def set_fixed_params(self, fixed_params):
+        """
+        Sets the fixed parameters for the NodeFor and its sub-pipeline.
+        """
+        if 'iterations' in fixed_params:
+            self.iterations = int(fixed_params.pop('iterations'))
+
+        for key, value in fixed_params.items():
+            if key == "loop_pipeline":
+                self.loop_pipeline.set_fixed_params(value)
+            else:
+                if key not in self.fixed_params:
+                    raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
+                self.fixed_params[key] = value
+        self.clear_memory()
+    
+    def set_fixed_param(self, key, value):
+        """
+        Sets a single fixed parameter on the NodeFor or its sub-pipeline.
+        """
+        if key == 'iterations':
+            self.iterations = int(value)
+        elif key == "loop_pipeline":
+            self.loop_pipeline.set_fixed_params(value)
+        else:
+            if key not in self.fixed_params:
+                raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
+            self.fixed_params[key] = value
+        self.clear_memory()
