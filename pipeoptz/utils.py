@@ -824,3 +824,23 @@ def OCR(image: np.ndarray, bb: Tuple[2, 2], lang=None) -> str:
     cropped_image = image[y1:y2, x1:x2]
     text = pytesseract.image_to_string(cropped_image, lang=lang)
     return text.strip()
+
+def RGB2Gray(image: np.ndarray, luminance=True, alpha_luminance=0):
+    """
+    Converts an RGB or RGBA image to grayscale.
+
+    Args:
+        image (np.ndarray): The input image (H, W, 3) for RGB or (H, W, 4) for RGBA.
+        luminance (bool, optional): If True, uses standard luminance weights (0.299R + 0.587G + 0.114B).
+                                    If False, uses equal weights (average). Defaults to True.
+        alpha_luminance (int, optional): The grayscale value to assign to fully transparent pixels
+                                         if the input is RGBA. Defaults to 0 (black).
+
+    Returns:
+        np.ndarray: The grayscale image (H, W) as a float array.
+    """
+    weight = [0.299, 0.587, 0.114] if luminance else [1/3, 1/3, 1/3]
+    gray = np.dot(image[..., :3], weight)
+    if image.shape[2] == 4:
+        gray[image[:,:,3] == 0] = alpha_luminance
+    return gray
