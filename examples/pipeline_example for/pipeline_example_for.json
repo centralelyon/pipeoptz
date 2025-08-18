@@ -1,5 +1,5 @@
 {
-    "name": "",
+    "name": "For Loop Test",
     "description": "",
     "nodes": [
         {
@@ -8,30 +8,45 @@
             "fixed_params": {}
         },
         {
-            "id": "for",
+            "id": "For Test",
             "type": "NodeFor",
             "loop_pipeline": {
-                "name": "",
+                "name": "For Loop",
                 "description": "",
                 "nodes": [
                     {
-                        "id": "plop",
+                        "id": "B",
                         "type": "add",
                         "fixed_params": {
                             "x": 1
                         }
+                    },
+                    {
+                        "id": "C",
+                        "type": "add",
+                        "fixed_params": {}
                     }
                 ],
                 "edges": [
                     {
                         "from_node": "run_params:loop_var",
-                        "to_node": "plop",
+                        "to_node": "B",
+                        "to_input": "y"
+                    },
+                    {
+                        "from_node": "B",
+                        "to_node": "C",
+                        "to_input": "x"
+                    },
+                    {
+                        "from_node": "run_params:loop_var",
+                        "to_node": "C",
                         "to_input": "y"
                     }
                 ]
             },
             "fixed_params": {
-                "iterations": 5
+                "iterations": 4
             }
         }
     ],
@@ -48,7 +63,7 @@
         },
         {
             "from_node": "A",
-            "to_node": "for",
+            "to_node": "For Test",
             "to_input": "loop_var"
         }
     ]
