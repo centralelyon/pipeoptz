@@ -347,9 +347,12 @@ class Pipeline:
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(dot_str)
         if generate_png:
+            print('plop')
             if png_filepath is None:
                 png_filepath = os.path.splitext(filepath)[0] + ".png"
-            os.system(f'dot -Tpng -Gdpi={dpi} "{filepath}" -o "{png_filepath}"')
+            res = os.system(f'dot -Tpng -Gdpi={dpi} "{filepath}" -o "{png_filepath}"')
+            if res:
+                print("Error during PNG generation")
             if cleanup_dot:
                 os.remove(filepath)
         return "\n".join(dot_lines)
