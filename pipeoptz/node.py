@@ -125,7 +125,7 @@ class Node:
     def is_fixed_param(self, key):
         """Checks if a parameter name is in the fixed parameters."""
         return key in self.fixed_params
-        
+
 
 class NodeIf(Node):
     """
@@ -238,6 +238,7 @@ class NodeIf(Node):
             self.fixed_params[key] = value
         self.clear_memory()
 
+
 class NodeFor(Node):
     """
     A node that executes a sub-pipeline for a given number of iterations.
@@ -256,6 +257,10 @@ class NodeFor(Node):
             loop_pipeline (Pipeline): The pipeline to execute in a loop.
             fixed_params (dict, optional): Fixed parameters for this node.
         """
+        if fixed_params in (None, {}):
+            fixed_params = {}
+        elif 'iterations' not in fixed_params or len(fixed_params) >= 1:
+            raise ValueError("Only 'iterations' is allowed as a fixed parameter.")
         super().__init__(id, func=lambda **kwargs: kwargs, fixed_params=fixed_params)
         self.loop_pipeline = loop_pipeline
         self.skip_failed_loop = False
@@ -298,12 +303,10 @@ class NodeFor(Node):
         for i in range(iterations):
             if self.debug:
                 print(f"\rExecuting node: {self.id} iteration {i+1}/{iterations}")
-            
-            run_params = {'loop_index': i, **inputs, **self.fixed_params}
 
             try:
                 last_node_id, hist, _ = self.loop_pipeline.run(
-                    run_params=run_params,
+                    run_params={'loop_index': i, **inputs},
                     optimize_memory=not memory,
                     skip_failed_loop=self.skip_failed_loop,
                     debug=self.debug
@@ -312,6 +315,132 @@ class NodeFor(Node):
             except Exception as e:
                 if self.skip_failed_loop:
                     print(f"Error in the for node {self.id} at iteration {i+1}/{iterations}: {e}")
+                    continue
+                raise e
+        
+        return inputs['loop_var']
+
+    def get_fixed_params(self):
+        """
+        Gets the fixed parameters of the NodeFor and its sub-pipeline.
+        """
+        params = {**self.fixed_params, "loop_pipeline": self.loop_pipeline.get_fixed_params()}
+        params['iterations'] = self.iterations
+        return params
+    
+    def set_fixed_params(self, fixed_params):
+        """
+        Sets the fixed parameters for the NodeFor and its sub-pipeline.
+        """
+        if 'iterations' in fixed_params:
+            self.iterations = int(fixed_params.pop('iterations'))
+
+        for key, value in fixed_params.items():
+            if key == "loop_pipeline":
+                self.loop_pipeline.set_fixed_params(value)
+            else:
+                if key not in self.fixed_params:
+                    raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
+                self.fixed_params[key] = value
+        self.clear_memory()
+    
+    def set_fixed_param(self, key, value):
+        """
+        Sets a single fixed parameter on the NodeFor or its sub-pipeline.
+        """
+        if key == 'iterations':
+            self.iterations = int(value)
+        elif key == "loop_pipeline":
+            self.loop_pipeline.set_fixed_params(value)
+        else:
+            if key not in self.fixed_params:
+                raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
+            self.fixed_params[key] = value
+        self.clear_memory()
+
+
+class NodeWhile(Node):
+    """
+    A node that executes a sub-pipeline while a condition is true.
+    It implements a 'while' loop behavior, where the output of one iteration
+    is the input for the next.
+
+    Attributes:
+        loop_pipeline (Pipeline): The pipeline to execute at each iteration.
+    """
+    def __init__(self, id, condition_func, loop_pipeline, fixed_params=None):
+        """
+        Initializes a NodeWhile.
+
+        Args:
+            id (str): The unique identifier for the node.
+            condition_func (callable): The function that returns a boolean value.
+            loop_pipeline (Pipeline): The pipeline to execute in a loop.
+            fixed_params (dict, optional): Fixed parameters for this node.
+        """
+        super().__init__(id, func=condition_func , fixed_params=fixed_params)
+        self.loop_pipeline = loop_pipeline
+        self.skip_failed_loop = False
+        self.debug = False
+
+    def set_run_params(self, skip_failed_loop=False, debug=False):
+        """
+        Sets the run parameters for the sub-pipelines.
+
+        Args:
+            skip_failed_loop (bool, optional): If True, execution will continue
+                even if one iteration fails.
+                Defaults to False.
+            debug (bool, optional): If True, enables debug printing for sub-pipelines.
+                Defaults to False.
+        """
+        self.skip_failed_loop = skip_failed_loop
+        self.debug = debug
+
+    def execute(self, inputs={}, memory=False):
+        """
+        Executes the while loop. It requires a 'loop_var' input for the initial value
+        that will be passed from one iteration to the next. The loop continues as
+        long as the `condition_func` returns True.
+        The `condition_func`parameters are prefixed with "condition_func:" in inputs.
+        A `max_iterations` parameter can be added to prevent infinite loops (need the `condition_func:`prefix if setted in inputs).
+
+        Args:
+            inputs (dict): Must contain 'loop_var' (any). Can also contain
+                           'max_iterations' (int) to prevent infinite loops.
+            memory (bool): Enables caching within the sub-pipeline.
+
+        Returns:
+            The output of the final iteration.
+        """
+        condition_inputs = {}
+        for k in inputs:
+            if k.startswith("condition_func:"):
+                condition_inputs[k[15:]] = inputs[k]
+        for k in condition_inputs:
+            del inputs["condition_func:"+k]
+
+        if 'loop_var' not in inputs:
+            raise ValueError("NodeFor requires a 'loop_var' input for the initial value.")
+        max_iterations = inputs.get('condition_func:max_iterations', self.fixed_params.get('max_iterations', float('inf')))
+        
+        i = 0
+        while self.func(**self.fixed_params, **condition_inputs, loop_var=inputs['loop_var']) and i < max_iterations:
+            i += 1
+            if self.debug:
+                print(f"\rExecuting node: {self.id} iteration {i}")
+
+            try:
+                last_node_id, hist, _ = self.loop_pipeline.run(
+                    run_params={'loop_index': i, **inputs},
+                    optimize_memory=not memory,
+                    skip_failed_loop=self.skip_failed_loop,
+                    debug=self.debug
+                )
+                inputs['loop_var'] = hist[last_node_id]
+            except Exception as e:
+                if self.skip_failed_loop:
+                    print(f"Error in the while node {self.id} at iteration {i+1}: {e}")
                     continue
                 raise e
         
