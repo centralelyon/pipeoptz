@@ -274,7 +274,7 @@ class Pipeline:
         last_node_id = self.static_order()[-1] if self.static_order() else None
 
         for node_id, node in self.nodes.items():
-            full_id = escape_id(node_id)
+            full_id = escape_id(node_id).replace(" ", "_")
             is_last = (node_id == last_node_id)
 
             if isinstance(node, NodeIf):
@@ -299,13 +299,14 @@ class Pipeline:
             elif isinstance(node, NodeFor):
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
                 dot_lines.append('    style=dashed;')
-                dot_lines.append(f'    label="For Loop: {node_id}";')
                 dot_lines.append(f'    "{full_id}" [shape=Mdiamond, label=< <B>{node_id}</B><BR/><FONT POINT-SIZE="10">For Loop</FONT> >];')
                 dot_lines.append(node.loop_pipeline.to_dot(None, _prefix=full_id + "_L_"))
                 loop_first = node.loop_pipeline.static_order()[0]
                 loop_last = node.loop_pipeline.static_order()[-1]
                 dot_lines.append(f'    "{full_id}" -> "{full_id}_L_{loop_first}" [label="start", tailport=s];')
                 dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}" [label="next"];')
+                dot_lines.append(f'    "{full_id}_output" [shape=diamond, label=< <FONT POINT-SIZE="10"> For Output</FONT> >];')
+                dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}_output";')
                 dot_lines.append('  }')
             elif isinstance(node, Pipeline):
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
@@ -324,8 +325,8 @@ class Pipeline:
 
         for to_id, deps in self.node_dependencies.items():
             for input_name, from_id in deps.items():
-                from_label = escape_id(from_id)
-                to_label = escape_id(to_id)
+                from_label = escape_id(from_id).replace(" ", "_")
+                to_label = escape_id(to_id).replace(" ", "_")
                 label_text = f"{input_name}"
                 if from_id.startswith("run_params:"):
                     if _prefix != "":
@@ -334,7 +335,7 @@ class Pipeline:
                     dot_lines.append(f'  {{ rank=source; \"params_{input_label}\"; }}')
                     dot_lines.append(f'  "params_{input_label}" [shape=ellipse, style=dashed, label=< <FONT POINT-SIZE="10">{input_label}</FONT> >];')
                     dot_lines.append(f'  "params_{input_label}" -> "{to_label}" [label="{input_label}", fontsize=10, style=dashed];')
-                elif isinstance(self.nodes[from_id], NodeIf):
+                elif isinstance(self.nodes[from_id], (NodeIf, NodeFor)):
                     dot_lines.append(f'  "{from_label}_output" -> "{to_label}" [label="{label_text}", fontsize=9];')
                 elif isinstance(self.nodes[to_id], NodeIf) and input_name.startswith("condition_func:"):
                     dot_lines.append(f'  "{from_label}" -> "{to_label}" [label="{label_text[15:]}", fontsize=9, headport=w];')

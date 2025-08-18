@@ -48,6 +48,11 @@
             "fixed_params": {
                 "iterations": 4
             }
+        },
+        {
+            "id": "D",
+            "type": "add",
+            "fixed_params": {}
         }
     ],
     "edges": [
@@ -65,6 +70,16 @@
             "from_node": "A",
             "to_node": "For Test",
             "to_input": "loop_var"
+        },
+        {
+            "from_node": "For Test",
+            "to_node": "D",
+            "to_input": "x"
+        },
+        {
+            "from_node": "run_params:y",
+            "to_node": "D",
+            "to_input": "y"
         }
     ]
 }
