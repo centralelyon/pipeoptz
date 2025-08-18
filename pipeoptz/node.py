@@ -144,21 +144,21 @@ class NodeIf(Node):
         super().__init__(id, condition_func, fixed_params=fixed_params)
         self.true_pipeline = true_pipeline
         self.false_pipeline = false_pipeline
-        self.skip_failed_images = False
+        self.skip_failed_loop = False
         self.debug = False
     
-    def set_run_params(self, skip_failed_images=False, debug=False):
+    def set_run_params(self, skip_failed_loop=False, debug=False):
         """
         Sets the run parameters for the sub-pipelines.
 
         Args:
-            skip_failed_images (bool, optional): If True, execution of iterative nodes
+            skip_failed_loop (bool, optional): If True, execution of iterative nodes
                 in sub-pipelines will continue even if one iteration fails.
                 Defaults to False.
             debug (bool, optional): If True, enables debug printing for sub-pipelines.
                 Defaults to False.
         """
-        self.skip_failed_images = skip_failed_images
+        self.skip_failed_loop = skip_failed_loop
         self.debug = debug
 
     def execute(self, inputs={}, memory=False):
@@ -184,9 +184,9 @@ class NodeIf(Node):
         for k in condition_inputs:
             del inputs["condition_func:"+k]
         if self.func(**self.fixed_params, **condition_inputs):
-            id, hist, _ = self.true_pipeline.run(run_params=inputs, optimize_memory= not memory, skip_failed_images=self.skip_failed_images, debug=self.debug)
+            id, hist, _ = self.true_pipeline.run(run_params=inputs, optimize_memory= not memory, skip_failed_loop=self.skip_failed_loop, debug=self.debug)
         else:
-            id, hist, _ = self.false_pipeline.run(run_params=inputs, optimize_memory= not memory, skip_failed_images=self.skip_failed_images, debug=self.debug)
+            id, hist, _ = self.false_pipeline.run(run_params=inputs, optimize_memory= not memory, skip_failed_loop=self.skip_failed_loop, debug=self.debug)
         if memory:
             self.output = id, hist
         return hist[id]
@@ -258,21 +258,21 @@ class NodeFor(Node):
         """
         super().__init__(id, func=lambda **kwargs: kwargs, fixed_params=fixed_params)
         self.loop_pipeline = loop_pipeline
-        self.skip_failed_images = False
+        self.skip_failed_loop = False
         self.debug = False
 
-    def set_run_params(self, skip_failed_images=False, debug=False):
+    def set_run_params(self, skip_failed_loop=False, debug=False):
         """
         Sets the run parameters for the sub-pipelines.
 
         Args:
-            skip_failed_images (bool, optional): If True, execution will continue
+            skip_failed_loop (bool, optional): If True, execution will continue
                 even if one iteration fails.
                 Defaults to False.
             debug (bool, optional): If True, enables debug printing for sub-pipelines.
                 Defaults to False.
         """
-        self.skip_failed_images = skip_failed_images
+        self.skip_failed_loop = skip_failed_loop
         self.debug = debug
 
     def execute(self, inputs={}, memory=False):
@@ -289,37 +289,33 @@ class NodeFor(Node):
             The output of the final iteration.
         """
         iterations = inputs.get('iterations', self.fixed_params.get('iterations'))
-        if iterations is None:
+        if not iterations:
             raise ValueError("NodeFor requires an 'iterations' input in 'inputs' or in 'fixed_params'.")
         
-        current_loop_var = inputs.get('loop_var')
         if 'loop_var' not in inputs:
             raise ValueError("NodeFor requires a 'loop_var' input for the initial value.")
 
-        for i in range(int(iterations)):
+        for i in range(iterations):
             if self.debug:
-                print(f"\rExecuting node: {self.id} iteration {i+1}/{iterations}", end="")
+                print(f"\rExecuting node: {self.id} iteration {i+1}/{iterations}")
             
-            run_params = {'loop_var': current_loop_var, 'loop_index': i, **inputs, **self.fixed_params}
+            run_params = {'loop_index': i, **inputs, **self.fixed_params}
 
             try:
                 last_node_id, hist, _ = self.loop_pipeline.run(
                     run_params=run_params,
                     optimize_memory=not memory,
-                    skip_failed_images=self.skip_failed_images,
+                    skip_failed_loop=self.skip_failed_loop,
                     debug=self.debug
                 )
-                current_loop_var = hist[last_node_id]
+                inputs['loop_var'] = hist[last_node_id]
             except Exception as e:
-                if self.skip_failed_images:
-                    print(f"Error in node {self.id} at iteration {i+1}/{iterations}: {e}")
+                if self.skip_failed_loop:
+                    print(f"Error in the for node {self.id} at iteration {i+1}/{iterations}: {e}")
                     continue
                 raise e
         
-        if self.debug:
-            print()
-        
-        return current_loop_var
+        return inputs['loop_var']
 
     def get_fixed_params(self):
         """

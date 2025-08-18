@@ -2,17 +2,19 @@ digraph Pipeline {
   rankdir=TB;
   node [fontsize=12 fontname="Helvetica"];
   "A" [shape=box, label=< <B>A</B><BR/><FONT POINT-SIZE="10">add</FONT> >];
-  subgraph cluster_for {
+  subgraph cluster_For Test {
     style=dashed;
-    label="For Loop: for";
-    "for" [shape=Mdiamond, label=< <B>for</B><BR/><FONT POINT-SIZE="10">For Loop</FONT> >];
+    label="For Loop: For Test";
+    "For Test" [shape=Mdiamond, label=< <B>For Test</B><BR/><FONT POINT-SIZE="10">For Loop</FONT> >];
 subgraph Pipeline {
   rankdir=TB;
   node [fontsize=12 fontname="Helvetica"];
-  "for_L_plop" [shape=box, label=< <B>plop</B><BR/><FONT POINT-SIZE="10">add</FONT> <BR/><FONT POINT-SIZE="8"><I>(x)</I></FONT> >];
+  "For Test_L_B" [shape=box, label=< <B>B</B><BR/><FONT POINT-SIZE="10">add</FONT> <BR/><FONT POINT-SIZE="8"><I>(x)</I></FONT> >];
+  "For Test_L_C" [shape=box, label=< <B>C</B><BR/><FONT POINT-SIZE="10">add</FONT> >];
+  "For Test_L_B" -> "For Test_L_C" [label="x", fontsize=9];
 }
-    "for" -> "for_L_plop" [label="start", tailport=s];
-    "for_L_plop" -> "for" [label="next"];
+    "For Test" -> "For Test_L_B" [label="start", tailport=s];
+    "For Test_L_C" -> "For Test" [label="next"];
   }
   { rank=source; "params_x"; }
   "params_x" [shape=ellipse, style=dashed, label=< <FONT POINT-SIZE="10">x</FONT> >];
@@ -20,5 +22,5 @@ subgraph Pipeline {
   { rank=source; "params_y"; }
   "params_y" [shape=ellipse, style=dashed, label=< <FONT POINT-SIZE="10">y</FONT> >];
   "params_y" -> "A" [label="y", fontsize=10, style=dashed];
-  "A" -> "for" [label="loop_var", fontsize=9];
+  "A" -> "For Test" [label="loop_var", fontsize=9];
 }
