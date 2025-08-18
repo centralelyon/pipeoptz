@@ -138,7 +138,7 @@ class Pipeline:
             raise ValueError("The graph contains a cycle, topological sort is impossible.")
         return topological_order
 
-    def run(self, run_params={}, optimize_memory=False, skip_failed_images=False, debug=False):
+    def run(self, run_params={}, optimize_memory=False, skip_failed_loop=False, debug=False):
         """
         Executes the entire pipeline from start to finish.
 
@@ -148,7 +148,7 @@ class Pipeline:
             optimize_memory (bool, optional): If True, outputs of nodes that are no
                 longer needed by subsequent nodes will be deleted to save memory.
                 Defaults to False.
-            skip_failed_images (bool, optional): In an iterative node, if True,
+            skip_failed_loop (bool, optional): In an iterative node, if True,
                 execution will continue even if one iteration fails. Defaults to False.
             debug (bool, optional): If True, prints the execution status of each node.
                 Defaults to False.
@@ -174,7 +174,7 @@ class Pipeline:
                 raise ValueError(f"The node with id: '{node_id}' was specified as a dependency but has not been added to the pipeline.")
             
             if isinstance(self.nodes[node_id], NodeIf) or isinstance(self.nodes[node_id], NodeFor):
-                self.nodes[node_id].set_run_params(skip_failed_images, debug)
+                self.nodes[node_id].set_run_params(skip_failed_loop, debug)
             node = self.nodes[node_id]
             inputs = {}
             loop_inputs = {}
@@ -194,16 +194,16 @@ class Pipeline:
             
             if len_loop == float("inf") and multiple_inputs == {}:
                 node_outputs[node_id] = node.execute(inputs, memory=not optimize_memory) if node_id[0]+node_id[-1] != "[]" \
-                                        else node.run(inputs, optimize_memory, skip_failed_images, debug)
+                                        else node.run(inputs, optimize_memory, skip_failed_loop, debug)
             elif multiple_inputs == {}:
                 node_outputs[node_id] = []
                 for i in range(len_loop):
                     try:
                         print(f"Executing node: {node_id} iteration {i+1}/{len_loop}", end="\r") if debug else None
                         node_outputs[node_id].append(node.execute({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}, memory=False) if node_id[0]+node_id[-1] != "[]" \
-                                        else node.run({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}, optimize_memory, skip_failed_images, debug))
+                                        else node.run({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}, optimize_memory, skip_failed_loop, debug))
                     except Exception as e:
-                        if skip_failed_images:
+                        if skip_failed_loop:
                             print(f"Error in node {node_id} at iteration {i+1}/{len_loop}: {e}")
                             continue
                         raise e
@@ -214,9 +214,9 @@ class Pipeline:
                     try:
                         print(f"Executing node: {node_id} with parameters {dict(zip(multiple_inputs.keys(), p))}", end="\r") if debug else None
                         node_outputs[node_id].append(node.execute({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, memory=False) if node_id[0]+node_id[-1] != "[]" \
-                                        else node.run({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, optimize_memory, skip_failed_images, debug))
+                                        else node.run({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, optimize_memory, skip_failed_loop, debug))
                     except Exception as e:
-                        if skip_failed_images:
+                        if skip_failed_loop:
                             print(f"Error in node {node_id} with parameters {dict(zip(multiple_inputs.keys(),p))}: {e}")
                             continue
                         raise e

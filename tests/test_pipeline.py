@@ -218,7 +218,7 @@ class TestPipelineRun:
         """
         Tests the execution of the pipeline with a looping node.
         """
-        last_node_id, outputs, _ = failing_loop_pipeline.run(skip_failed_images=True)
+        last_node_id, outputs, _ = failing_loop_pipeline.run(skip_failed_loop=True)
         assert last_node_id == "add_one_fail"
         assert outputs['add_one_fail'] == [2, 4]
 
