@@ -59,7 +59,10 @@ class Node:
                 execution, after printing debug information.
         """
         if memory:
-            to_hash = list(inputs.values())
+            to_hash = []
+            for v in inputs.values():
+                # hash(-1) == hash(-2) in python
+                to_hash.append(v) if v != -1 else to_hash.append(v+1e-16)
             for i, e in enumerate(to_hash):
                 # to avoid import numpy only for this test
                 if e.__class__.__name__ == "ndarray":
@@ -419,17 +422,20 @@ class NodeWhile(Node):
                 condition_inputs[k[15:]] = inputs[k]
         for k in condition_inputs:
             del inputs["condition_func:"+k]
+        for k in self.fixed_params:
+            if k != "max_iterations":
+                condition_inputs[k] = self.fixed_params[k]
 
         if 'loop_var' not in inputs:
-            raise ValueError("NodeFor requires a 'loop_var' input for the initial value.")
+            raise ValueError("NodeWhile requires a 'loop_var' input for the initial value.")
         max_iterations = inputs.get('condition_func:max_iterations', self.fixed_params.get('max_iterations', float('inf')))
         
         i = 0
-        while self.func(**self.fixed_params, **condition_inputs, loop_var=inputs['loop_var']) and i < max_iterations:
+        while self.func(**condition_inputs, loop_var=inputs['loop_var']) and i < max_iterations:
             i += 1
             if self.debug:
                 print(f"\rExecuting node: {self.id} iteration {i}")
-
+                
             try:
                 last_node_id, hist, _ = self.loop_pipeline.run(
                     run_params={'loop_index': i, **inputs},

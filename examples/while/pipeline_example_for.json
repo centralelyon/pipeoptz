@@ -1,0 +1,57 @@
+{
+    "name": "For Loop Test",
+    "description": "",
+    "nodes": [
+        {
+            "id": "A",
+            "type": "add",
+            "fixed_params": {}
+        },
+        {
+            "id": "While Test",
+            "type": "NodeWhile",
+            "condition_type": "__main__.cond_func",
+            "loop_pipeline": {
+                "name": "While Loop",
+                "description": "",
+                "nodes": [
+                    {
+                        "id": "B",
+                        "type": "add",
+                        "fixed_params": {
+                            "x": 1
+                        }
+                    }
+                ],
+                "edges": [
+                    {
+                        "from_node": "run_params:loop_var",
+                        "to_node": "B",
+                        "to_input": "y"
+                    }
+                ]
+            },
+            "fixed_params": {
+                "max_iterations": 10,
+                "y": 5
+            }
+        }
+    ],
+    "edges": [
+        {
+            "from_node": "run_params:x",
+            "to_node": "A",
+            "to_input": "x"
+        },
+        {
+            "from_node": "run_params:y",
+            "to_node": "A",
+            "to_input": "y"
+        },
+        {
+            "from_node": "A",
+            "to_node": "While Test",
+            "to_input": "loop_var"
+        }
+    ]
+}

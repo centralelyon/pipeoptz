@@ -2,7 +2,7 @@ import json
 import importlib
 import os, sys, time
 from collections import deque
-from .node import Node, NodeIf, NodeFor
+from .node import Node, NodeIf, NodeFor, NodeWhile
 from .utils import product
 
 class Pipeline:
@@ -173,7 +173,7 @@ class Pipeline:
             if node_id not in self.nodes:
                 raise ValueError(f"The node with id: '{node_id}' was specified as a dependency but has not been added to the pipeline.")
             
-            if isinstance(self.nodes[node_id], NodeIf) or isinstance(self.nodes[node_id], NodeFor):
+            if isinstance(self.nodes[node_id], (NodeIf, NodeFor, NodeWhile)):
                 self.nodes[node_id].set_run_params(skip_failed_loop, debug)
             node = self.nodes[node_id]
             inputs = {}
@@ -308,6 +308,18 @@ class Pipeline:
                 dot_lines.append(f'    "{full_id}_output" [shape=diamond, label=< <FONT POINT-SIZE="10"> For Output</FONT> >];')
                 dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}_output";')
                 dot_lines.append('  }')
+            elif isinstance(node, NodeWhile):
+                dot_lines.append(f'  subgraph cluster_{full_id} {{')
+                dot_lines.append('    style=dashed;')
+                dot_lines.append(f'    "{full_id}" [shape=Mdiamond, label=< <B>{node_id}</B><BR/><FONT POINT-SIZE="10">While Loop</FONT> >];')
+                dot_lines.append(node.loop_pipeline.to_dot(None, _prefix=full_id + "_L_"))
+                loop_first = node.loop_pipeline.static_order()[0]
+                loop_last = node.loop_pipeline.static_order()[-1]
+                dot_lines.append(f'    "{full_id}" -> "{full_id}_L_{loop_first}" [label="start", tailport=s];')
+                dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}" [label="next"];')
+                dot_lines.append(f'    "{full_id}_output" [shape=diamond, label=< <FONT POINT-SIZE="10"> While Output</FONT> >];')
+                dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}_output";')
+                dot_lines.append('  }')
             elif isinstance(node, Pipeline):
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
                 dot_lines.append(f'    label="SubPipeline: {node.name}"; style=filled; color=lightgrey;')
@@ -335,9 +347,9 @@ class Pipeline:
                     dot_lines.append(f'  {{ rank=source; \"params_{input_label}\"; }}')
                     dot_lines.append(f'  "params_{input_label}" [shape=ellipse, style=dashed, label=< <FONT POINT-SIZE="10">{input_label}</FONT> >];')
                     dot_lines.append(f'  "params_{input_label}" -> "{to_label}" [label="{input_label}", fontsize=10, style=dashed];')
-                elif isinstance(self.nodes[from_id], (NodeIf, NodeFor)):
+                elif isinstance(self.nodes[from_id], (NodeIf, NodeFor, NodeWhile)):
                     dot_lines.append(f'  "{from_label}_output" -> "{to_label}" [label="{label_text}", fontsize=9];')
-                elif isinstance(self.nodes[to_id], NodeIf) and input_name.startswith("condition_func:"):
+                elif isinstance(self.nodes[to_id], (NodeIf, NodeWhile)) and input_name.startswith("condition_func:"):
                     dot_lines.append(f'  "{from_label}" -> "{to_label}" [label="{label_text[15:]}", fontsize=9, headport=w];')
                 else:
                     dot_lines.append(f'  "{from_label}" -> "{to_label}" [label="{label_text}", fontsize=9];')
@@ -381,6 +393,14 @@ class Pipeline:
                 return {
                     "id": node.id,
                     "type": "NodeFor",
+                    "loop_pipeline": serialize_pipeline(node.loop_pipeline),
+                    "fixed_params": node.fixed_params
+                }
+            elif isinstance(node, NodeWhile):
+                return {
+                    "id": node.id,
+                    "type": "NodeWhile",
+                    "condition_type": f"{node.func.__module__}.{node.func.__name__}",
                     "loop_pipeline": serialize_pipeline(node.loop_pipeline),
                     "fixed_params": node.fixed_params
                 }
@@ -477,21 +497,25 @@ class Pipeline:
                 }
 
                 if node_type == "NodeIf":
-                    condition_func = resolver(node_data["condition_type"])
-                    true_pipeline = build_pipeline(node_data["true_pipeline"])
-                    false_pipeline = build_pipeline(node_data["false_pipeline"])
-
                     node = NodeIf(
                         id=node_id,
-                        condition_func=condition_func,
-                        true_pipeline=true_pipeline,
-                        false_pipeline=false_pipeline,
+                        condition_func=resolver(node_data["condition_type"]),
+                        true_pipeline=build_pipeline(node_data["true_pipeline"]),
+                        false_pipeline=build_pipeline(node_data["false_pipeline"]),
                         fixed_params=fixed_params
                     )
                 elif node_type == "NodeFor":
                     loop_pipeline = build_pipeline(node_data["loop_pipeline"])
                     node = NodeFor(
                         id=node_id,
+                        loop_pipeline=loop_pipeline,
+                        fixed_params=fixed_params
+                    )
+                elif node_type == "NodeWhile":
+                    loop_pipeline = build_pipeline(node_data["loop_pipeline"])
+                    node = NodeWhile(
+                        id=node_id,
+                        condition_func=resolver(node_data["condition_type"]),
                         loop_pipeline=loop_pipeline,
                         fixed_params=fixed_params
                     )
