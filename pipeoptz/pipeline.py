@@ -101,6 +101,8 @@ class Pipeline:
                 if source_node_id.startswith("run_params:"):
                     continue
                 elif source_node_id not in self.nodes:
+                    if ":" in source_node_id[-3:] and source_node_id.rsplit(":", 1)[0] in self.nodes:
+                        continue 
                     raise ValueError(f"The source node '{source_node_id}' for '{node_id}' does not exist in the pipeline")
                 elif node_id not in self.nodes:
                     raise ValueError(f"The target node '{node_id}' does not exist in the pipeline.")
@@ -189,6 +191,10 @@ class Pipeline:
                     len_loop = min(len_loop, len(node_outputs[source_node_id]))
                 elif input_param_name[0]+input_param_name[-1] == "{}":
                     multiple_inputs[input_param_name[1:-1]] = node_outputs[source_node_id]
+                elif ":" in source_node_id[-3:] and not source_node_id.startswith("condition_func:"):
+                    source_node_id, key = source_node_id.rsplit(":", 1)
+                    key = int(key) if key.isdigit() else key
+                    inputs[input_param_name.split(":", 1)[0]] = node_outputs[source_node_id][key]
                 else:
                     inputs[input_param_name] = node_outputs[source_node_id]
             

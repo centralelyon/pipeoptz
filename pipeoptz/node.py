@@ -62,7 +62,7 @@ class Node:
             to_hash = []
             for v in inputs.values():
                 # hash(-1) == hash(-2) in python
-                to_hash.append(v) if v != -1 else to_hash.append(v+1e-16)
+                to_hash.append(v) if type(v) is int and v != -1 else to_hash.append(v+1e-16)
             for i, e in enumerate(to_hash):
                 # to avoid import numpy only for this test
                 if e.__class__.__name__ == "ndarray":
