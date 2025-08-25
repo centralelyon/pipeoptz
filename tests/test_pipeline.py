@@ -295,3 +295,26 @@ class TestPipelineSerialization:
         last_node_id, outputs, _ = reconstructed_pipeline.run(run_params={'x': 5, 'y': 3})
         assert last_node_id == "mul"
         assert outputs['mul'] == 80
+
+class TestPipelineMultiOutput:
+    def test_run_multi_output_by_key(self, add_func):
+        """
+        Tests pipeline with a node that has multiple outputs, accessed by key.
+        """
+        p = Pipeline(name="multi_output_key")
+        p.add_node(Node(id="multi_out", func=lambda: {'x': 1, 'y': 2}))
+        p.add_node(Node(id="add", func=add_func), predecessors={'a': 'multi_out:x', 'b': 'multi_out:y'})
+        last_node_id, outputs, _ = p.run()
+        assert last_node_id == "add"
+        assert outputs['add'] == 3
+
+    def test_run_multi_output_by_index(self, add_func):
+        """
+        Tests pipeline with a node that has multiple outputs, accessed by index.
+        """
+        p = Pipeline(name="multi_output_index")
+        p.add_node(Node(id="multi_out", func=lambda: [10, 20]))
+        p.add_node(Node(id="add", func=add_func), predecessors={'a': 'multi_out:0', 'b': 'multi_out:1'})
+        last_node_id, outputs, _ = p.run()
+        assert last_node_id == "add"
+        assert outputs['add'] == 30

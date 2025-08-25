@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import sys, os
 sys.path.append(os.path.abspath("../"))
-from pipeoptz.node import Node, NodeIf
+from pipeoptz.node import Node, NodeIf, NodeFor, NodeWhile
 from pipeoptz.pipeline import Pipeline
 
 
@@ -39,6 +39,15 @@ def false_pipeline():
     """
     p = Pipeline(name="false_path")
     p.add_node(Node(id="false_node", func=lambda x: f"false_{x}"), predecessors={'x': 'run_params:input'})
+    return p
+
+@pytest.fixture
+def loop_pipeline():
+    """
+    A simple pipeline for loop nodes.
+    """
+    p = Pipeline(name="loop_pipe")
+    p.add_node(Node(id="add_one", func=lambda loop_var: loop_var + 1), predecessors={'loop_var': 'run_params:loop_var'})
     return p
 
 
@@ -290,3 +299,89 @@ class TestNodeIf:
         assert node_if.fixed_params['own_param'] == 99
         assert true_pipeline.get_node("true_node").fixed_params['z'] == 101
         assert false_pipeline.get_node("false_node").fixed_params['w'] == 202
+
+
+# --- Class NodeFor tests ---
+
+class TestNodeFor:
+    def test_nodefor_initialization(self, loop_pipeline):
+        """
+        Tests if a NodeFor is initialized correctly.
+        """
+        node_for = NodeFor(id="for_node", loop_pipeline=loop_pipeline, fixed_params={'iterations': 3})
+        assert node_for.id == "for_node"
+        assert node_for.loop_pipeline == loop_pipeline
+        assert node_for.fixed_params == {'iterations': 3}
+
+    def test_execute_fixed_iterations(self, loop_pipeline):
+        """
+        Tests NodeFor execution with a fixed number of iterations.
+        """
+        node_for = NodeFor(id="for_node", loop_pipeline=loop_pipeline, fixed_params={'iterations': 3})
+        result = node_for.execute(inputs={'loop_var': 0})
+        assert result == 3
+
+    def test_execute_input_iterations(self, loop_pipeline):
+        """
+        Tests NodeFor execution with iterations from input.
+        """
+        node_for = NodeFor(id="for_node", loop_pipeline=loop_pipeline)
+        result = node_for.execute(inputs={'iterations': 5, 'loop_var': 0})
+        assert result == 5
+
+    def test_execute_missing_iterations_raises_error(self, loop_pipeline):
+        """
+        Tests that NodeFor raises an error if 'iterations' is missing.
+        """
+        node_for = NodeFor(id="for_node", loop_pipeline=loop_pipeline)
+        with pytest.raises(ValueError, match="NodeFor requires an 'iterations' input"):
+            node_for.execute(inputs={'loop_var': 0})
+
+    def test_execute_missing_loop_var_raises_error(self, loop_pipeline):
+        """
+        Tests that NodeFor raises an error if 'loop_var' is missing.
+        """
+        node_for = NodeFor(id="for_node", loop_pipeline=loop_pipeline, fixed_params={'iterations': 3})
+        with pytest.raises(ValueError, match="NodeFor requires a 'loop_var' input"):
+            node_for.execute(inputs={})
+
+
+# --- Class NodeWhile tests ---
+
+class TestNodeWhile:
+    def test_nodewhile_initialization(self, loop_pipeline):
+        """
+        Tests if a NodeWhile is initialized correctly.
+        """
+        cond_func = lambda loop_var: loop_var < 5
+        node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
+        assert node_while.id == "while_node"
+        assert node_while.func == cond_func
+        assert node_while.loop_pipeline == loop_pipeline
+
+    def test_execute_while_condition_true(self, loop_pipeline):
+        """
+        Tests NodeWhile execution until the condition is false.
+        """
+        cond_func = lambda loop_var: loop_var < 5
+        node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
+        result = node_while.execute(inputs={'loop_var': 0})
+        assert result == 5
+
+    def test_execute_max_iterations(self, loop_pipeline):
+        """
+        Tests NodeWhile execution with a max_iterations limit.
+        """
+        cond_func = lambda loop_var: True  # Condition is always true
+        node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline, fixed_params={'max_iterations': 3})
+        result = node_while.execute(inputs={'loop_var': 0})
+        assert result == 3
+
+    def test_execute_missing_loop_var_raises_error(self, loop_pipeline):
+        """
+        Tests that NodeWhile raises an error if 'loop_var' is missing.
+        """
+        cond_func = lambda loop_var: loop_var < 5
+        node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
+        with pytest.raises(ValueError, match="NodeWhile requires a 'loop_var' input"):
+            node_while.execute(inputs={})

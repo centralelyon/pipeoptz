@@ -262,7 +262,7 @@ class NodeFor(Node):
         """
         if fixed_params in (None, {}):
             fixed_params = {}
-        elif 'iterations' not in fixed_params or len(fixed_params) >= 1:
+        elif 'iterations' not in fixed_params or len(fixed_params) >= 2:
             raise ValueError("Only 'iterations' is allowed as a fixed parameter.")
         super().__init__(id, func=lambda **kwargs: kwargs, fixed_params=fixed_params)
         self.loop_pipeline = loop_pipeline
