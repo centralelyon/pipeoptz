@@ -80,11 +80,7 @@ class Node:
                 self.input_hash_last_exec = current_input_hash
             return self.output
         except Exception as e:
-            print(f"Error in executing node {self.id}: {e}")
-            print("Node fixed parameters:", self.fixed_params)
-            if inputs:
-                print("Node inputs:", inputs)
-            raise
+            raise Exception(f"Error in executing node {self.id}: {e}\nNode fixed parameters: {self.fixed_params}\nNode inputs: {inputs}")
 
     def get_fixed_params(self):
         """Returns the dictionary of fixed parameters."""

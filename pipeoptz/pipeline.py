@@ -23,6 +23,7 @@ class Pipeline:
             { 'target_node_id': {'target_input_name': 'source_node_id'} }
         timer (dict): Stores the execution time for each node after a run.
     """
+
     def __init__(self, name, description=""):
         self.name = name
         self.description = description
@@ -538,3 +539,9 @@ class Pipeline:
             return pipeline_instance
 
         return build_pipeline(pipeline_def)
+
+    def run_single_node(self, node_id, inputs={}, change_memory=False, debug=False):
+        inputs = {**inputs, 
+                  **{input_param: self.nodes[source_node_id].output 
+                        for input_param, source_node_id in self.node_dependencies[node_id]}}
+        return self.nodes[node_id].execute(inputs, memory=change_memory, debug=debug)
