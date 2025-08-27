@@ -540,8 +540,8 @@ class Pipeline:
 
         return build_pipeline(pipeline_def)
 
-    def run_single_node(self, node_id, inputs={}, change_memory=False, debug=False):
+    def run_single_node(self, node_id, inputs={}, change_memory=False):
         inputs = {**inputs, 
                   **{input_param: self.nodes[source_node_id].output 
-                        for input_param, source_node_id in self.node_dependencies[node_id]}}
-        return self.nodes[node_id].execute(inputs, memory=change_memory, debug=debug)
+                        for input_param, source_node_id in self.node_dependencies[node_id].items()}}
+        return self.nodes[node_id].execute(inputs, memory=change_memory)
