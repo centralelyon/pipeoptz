@@ -5,7 +5,7 @@
 
 **PipeOptz** is a Python library for optimizing the parameters of processing pipelines. It is particularly suited for tasks in image processing, but its generic design allows it to be applied to any domain where a sequence of operations needs to be tuned to achieve an optimal result.
 
-The core idea is to represent a workflow as a Directed Acyclic Graph (DAG) of processing **Nodes**. The library then uses various metaheuristic optimization algorithms to find the best set of parameters for these nodes to minimize a given loss function.
+The core idea is to represent a workflow as a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph) (DAG) of processing **Nodes**. The library then uses various metaheuristic optimization algorithms to find the best set of parameters for these nodes to minimize a given loss function.
 
 ## Core Concepts
 
@@ -32,14 +32,14 @@ The `Pipeline` object manages the collection of nodes and their dependencies, fo
 
 ### `Parameter`
 These objects define the search space for the optimization. They specify which node parameters are tunable and their possible range of values. Subclasses exist for different data types:
-- `IntParameter`: An integer within a min/max range.
-- `FloatParameter`: A float within a min/max range.
-- `ChoiceParameter`: A value from a predefined list of options.
-- `BoolParameter`: A `True` or `False` value.
-- `MultiChoiceParameter`: A sub-list of choices from a list of options within a min/max length range.
+- `IntParameter`: An integer within a min/max range (e.g., 1 to 10).
+- `FloatParameter`: A float within a min/max range (e.g., 0.0 to 1.0).
+- `ChoiceParameter`: A value from a predefined list of options (e.g., ['option1', 'option2']).
+- `BoolParameter`: A binary value (`True` or `False`).
+- `MultiChoiceParameter`: A sub-list of choices from a list of options within a min/max length range (e.g., choose 1 to 4 items from ['option1', 'option2', 'option3', 'option4']).
 
 ### `PipelineOptimizer`
-This is the main engine for the optimization process. It takes the `Pipeline`, a `loss_function` to minimize, and the `Parameter` objects to tune. It provides a simple interface to run various optimization algorithms.
+This is the main engine for the optimization process. It takes as input the `Pipeline`, a `loss_function` to minimize, and the `Parameter` objects to tune. It provides a simple interface to run various optimization algorithms. It outputs a pipeline with optimized parameters.
 
 ## Utility Functions (`utils.py`)
 
@@ -56,14 +56,51 @@ Some of the available functions include:
 
 These utilities are designed to speed up the process of building complex image analysis workflows.
 
-## Installation
+## Setup and Installation
 
 Currently, PipeOptz is not yet available on PyPI. You can install it directly from the source code:
 
 ```bash
 git clone https://github.com/your-username/pipeoptz.git
 cd pipeoptz
-pip install .
+```
+
+
+
+### Using `venv` (recommended)
+
+1. **Create a virtual environment:**
+
+```bash
+python -m venv venv
+```
+
+2. **Activate the environment:**
+
+* On macOS/Linux:
+
+```bash
+source venv/bin/activate
+```
+* On Windows:
+
+```bash
+venv\Scripts\activate
+```
+
+3. **Install the module:**
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Basic usage:
+
+```python
+import pipeoptz
+ 
+pipeoptz.__version__  # Example usage
 ```
 
 ## Quick Start: Optimizing an Image Processing Pipeline
