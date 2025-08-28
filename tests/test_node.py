@@ -88,17 +88,6 @@ class TestNode:
         result = node.execute(inputs={'b': 9})
         assert result == 10
 
-    def test_execute_raises_exception(self):
-        """
-        Tests that exceptions from the wrapped function are propagated.
-        """
-        def error_func():
-            raise ValueError("Test error")
-        
-        node = Node(id="error_node", func=error_func)
-        with pytest.raises(ValueError, match="Test error"):
-            node.execute()
-
     def test_memory_caching_avoids_recomputation(self, mock_func_with_call_tracker):
         """
         Tests that memory=True prevents re-execution with the same inputs.

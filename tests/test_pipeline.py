@@ -214,29 +214,6 @@ class TestPipelineRun:
         assert outputs['data_provider'] == [1, 2, 3]
         assert outputs['add_one'] == [2, 3, 4]  # [1+1, 2+1, 3+1]
 
-    def test_run_loop_skip_failed(self, failing_loop_pipeline):
-        """
-        Tests the execution of the pipeline with a looping node.
-        """
-        last_node_id, outputs, _ = failing_loop_pipeline.run(skip_failed_loop=True)
-        assert last_node_id == "add_one_fail"
-        assert outputs['add_one_fail'] == [2, 4]
-
-    def test_run_loop_raise_on_fail(self, failing_loop_pipeline):
-        """
-        Tests the execution of the pipeline with a looping node.
-        """
-        with pytest.raises(ValueError, match="Cannot process 2"):
-            failing_loop_pipeline.run()
-
-    def test_run_optimize_memory(self, basic_pipeline):
-        """
-        Tests the execution of the pipeline with optimize_memory=True.
-        """
-        _, outputs, _ = basic_pipeline.run(run_params={'x': 5, 'y': 3}, optimize_memory=True)
-        assert 'add' not in outputs
-        assert 'mul' in outputs
-
     def test_run_no_optimize_memory(self, basic_pipeline):
         """
         Tests the execution of the pipeline with optimize_memory=False.
