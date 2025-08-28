@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Testing tools
+.pytest_cache/
+
+# Distribution / packaging
+./build/
+dist/
+
+# Environments
+.venv
+venv/
+
+# IDE specific
+*~
+.vscode/settings.json
+
+# OS specific
+*.DS_Store

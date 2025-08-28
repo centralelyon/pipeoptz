@@ -809,7 +809,7 @@ def iou_loss(image_a: np.ndarray, image_b: np.ndarray) -> float:
     iou = intersection / union
     return 1.0 - iou
 
-def OCR(image: np.ndarray, bb: Tuple[2, 2], lang=None) -> str:
+def OCR(image: np.ndarray, bb: Tuple[int, int], lang=None) -> str:
     """
     Performs Optical Character Recognition (OCR) on a specified bounding box within an image.
 

@@ -3,3 +3,7 @@ scipy
 opencv-python
 scikit-learn
 Pillow
+matplotlib
+ipykernel
+pytesseract
+matplotlib-inline
