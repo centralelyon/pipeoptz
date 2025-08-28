@@ -248,7 +248,7 @@ class Pipeline:
             self.timer[node_id] = time.time() - start_time
         return last_node_id, node_outputs, (sum(self.timer.values()), self.timer)
 
-    def to_dot(self, filepath=None, generate_png=False, png_filepath=None, cleanup_dot=False, dpi=160, _prefix=""):
+    def to_dot(self, filepath=None, generate_png=False, png_filepath=None, cleanup_dot=False, dpi=160, add_optz=False, _prefix=""):
         """
         Generates a DOT language representation of the pipeline graph.
 
@@ -332,7 +332,7 @@ class Pipeline:
                 dot_lines.append(f'    label="SubPipeline: {node.name}"; style=filled; color=lightgrey;')
                 dot_lines.append(node.to_dot(None, _prefix=full_id + "_"))
                 dot_lines.append('  }')
-            else:
+            elif add_optz or not node_id.startswith("[optz]"):
                 func_module = node.func.__module__
                 func_name = node.func.__name__
                 func_label = f"{func_module}.{func_name}" if func_module != '__main__' else func_name
@@ -358,7 +358,7 @@ class Pipeline:
                     dot_lines.append(f'  "{from_label}_output" -> "{to_label}" [label="{label_text}", fontsize=9];')
                 elif isinstance(self.nodes[to_id], (NodeIf, NodeWhile)) and input_name.startswith("condition_func:"):
                     dot_lines.append(f'  "{from_label}" -> "{to_label}" [label="{label_text[15:]}", fontsize=9, headport=w];')
-                else:
+                elif add_optz or not from_label.startswith("[optz]"):
                     dot_lines.append(f'  "{from_label}" -> "{to_label}" [label="{label_text}", fontsize=9];')
 
         dot_lines.append("}")
