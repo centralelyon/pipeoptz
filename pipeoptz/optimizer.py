@@ -22,7 +22,7 @@ class PipelineOptimizer:
         pipeline (Pipeline): The pipeline instance to be optimized.
         params_to_optimize (list): A list of Parameter objects to be tuned.
     """
-    def __init__(self, pipeline, loss_function, max_time_pipeline):
+    def __init__(self, pipeline, loss_function, max_time_pipeline=0):
         """
         Initializes a PipelineOptimizer.
 
@@ -31,6 +31,7 @@ class PipelineOptimizer:
             loss_function (callable): A function that takes the pipeline's output and the
                 expected output, and returns a numerical loss value.
             max_time_pipeline (float): The maximum time allowed for a single pipeline run (in seconds).
+                0 mean no time limit
             X (list): A list of dictionaries, where each dictionary represents the `run_params`
                 for a pipeline execution during optimization.
             y (list): A list of expected outputs corresponding to each `run_params` in `X`.
@@ -38,7 +39,7 @@ class PipelineOptimizer:
         assert isinstance(pipeline, Pipeline), "pipeline must be an instance of Pipeline"
         assert callable(loss_function), "loss_function must be a callable function"
         assert isinstance(max_time_pipeline, (int, float)), "max_time_pipeline must be a number"
-        assert max_time_pipeline > 0, "max_time_pipeline must be a positive number"
+        assert max_time_pipeline >= 0, "max_time_pipeline must be a positive number"
 
         self.pipeline = pipeline
         self.params_to_optimize = []
@@ -127,7 +128,7 @@ class PipelineOptimizer:
             index, res, t = self.pipeline.run(run_param, optimize_memory=True)
             results.append(res[index])
             loss += self.loss(results[-1], y[i])
-            if self.max_time_pipeline not in (0, None, -1) and t[0] > self.max_time_pipeline:
+            if self.max_time_pipeline != 0 and t[0] > self.max_time_pipeline:
                 return results+[None]*(len(X)-i-1), float("inf")
         loss /= i+1
         return results, loss
