@@ -109,17 +109,18 @@ class PipelineOptimizer:
             values[f"{param.node_id}.{param.param_name}"] = param.get_value()
         return values
 
-    def evaluate(self, X, y):
+    def evaluate(self, X, y, y_negative=None):
         """
-        Evaluates the current parameters of the pipeline.
-
-        This method runs the pipeline with the current parameter values on the `X` and `y` for each run,
-        and returns the outputs and the average loss compared to the expected values.
-
-        Returns:
-            dict: The outputs of the pipeline after running it with the current parameters.
+        Evaluates the pipeline on the provided dataset and computes the average loss.
+        Args:
+            X (list): A list of dictionaries, where each dictionary represents the `run_params`
+                for a pipeline execution during optimization.
+            y (list): A list of expected outputs corresponding to each `run_params` in `X`.
+            y_negative (list, optional): A list of negative examples for some loss functions. Defaults to None.
+            
         """
         self.update_pipeline_params()
+        is_triplet_loss = y_negative is not None
         
         # Run the pipeline and return the outputs
         results = []
@@ -127,7 +128,10 @@ class PipelineOptimizer:
         for i, run_param in enumerate(X):
             index, res, t = self.pipeline.run(run_param, optimize_memory=True)
             results.append(res[index])
-            loss += self.loss(results[-1], y[i])
+            if is_triplet_loss:
+                loss += self.loss(results[-1], y[i], y_negative[i])
+            else:
+                loss += self.loss(results[-1], y[i])
             if self.max_time_pipeline != 0 and t[0] > self.max_time_pipeline:
                 return results+[None]*(len(X)-i-1), float("inf")
         loss /= i+1
