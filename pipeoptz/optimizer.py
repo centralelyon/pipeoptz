@@ -197,7 +197,7 @@ class PipelineOptimizer:
             normalized_history[:, i] = final_normalized
         return normalized_history.T
 
-    def optimize_ACO(self, X, y, iterations=100, ants=20, alpha=1.0, beta=1.0, evaporation_rate=0.3, param_sampling=20, verbose=False):
+    def optimize_ACO(self, X, y, y_negative=None, iterations=100, ants=20, alpha=1.0, beta=1.0, evaporation_rate=0.3, param_sampling=20, verbose=False):
         """
         Ant Colony Optimization (ACO) with real use of beta for heuristic guidance.
 
@@ -262,7 +262,7 @@ class PipelineOptimizer:
                     candidate[name] = selected
 
                 self.set_params(candidate)
-                _, loss = self.evaluate(X, y)
+                _, loss = self.evaluate(X, y, y_negative)
 
                 solutions.append(candidate)
                 losses.append(loss)
@@ -293,7 +293,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_params, loss_log
 
-    def optimize_SA(self, X, y, iterations=100, initial_temp=1.0, cooling_rate=0.95, verbose=False):
+    def optimize_SA(self, X, y, y_negative=None, iterations=100, initial_temp=1.0, cooling_rate=0.95, verbose=False):
         """
         Optimizes the pipeline using Simulated Annealing (SA).
 
@@ -311,7 +311,7 @@ class PipelineOptimizer:
             for p in self.params_to_optimize
         }
         self.set_params(current_params)
-        _, current_loss = self.evaluate(X, y)
+        _, current_loss = self.evaluate(X, y, y_negative)
 
         best_params = current_params.copy()
         best_loss = current_loss
@@ -329,7 +329,7 @@ class PipelineOptimizer:
             candidate[name] = param.get_random_value()
 
             self.set_params(candidate)
-            _, candidate_loss = self.evaluate(X, y)
+            _, candidate_loss = self.evaluate(X, y, y_negative)
 
             delta = candidate_loss - current_loss
             if delta < 0 or np.exp(-delta / temperature) > rd.random():
@@ -347,7 +347,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_params, loss_log
 
-    def optimize_PSO(self, X, y, iterations=100, swarm_size=20, inertia=0.5, cognitive=1.5, social=1.5, verbose=False):
+    def optimize_PSO(self, X, y, y_negative=None, iterations=100, swarm_size=20, inertia=0.5, cognitive=1.5, social=1.5, verbose=False):
         """
         Optimizes the pipeline using Particle Swarm Optimization (PSO).
 
@@ -376,7 +376,7 @@ class PipelineOptimizer:
             velocity = {name: 0.0 for name in param_names}
 
             self.set_params(particle)
-            _, loss = self.evaluate(X, y)
+            _, loss = self.evaluate(X, y, y_negative)
 
             particles.append(particle)
             velocities.append(velocity)
@@ -406,7 +406,7 @@ class PipelineOptimizer:
                         new_particle[name] = particles[i][name]
 
                 self.set_params(new_particle)
-                _, loss = self.evaluate(X, y)
+                _, loss = self.evaluate(X, y, y_negative)
 
                 if loss < personal_best_loss[i]:
                     personal_best[i] = new_particle.copy()
@@ -425,7 +425,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_particle, loss_log
 
-    def optimize_GA(self, X, y, generations=50, population_size=20, mutation_rate=0.1, crossover_rate=0.7, verbose=False):
+    def optimize_GA(self, X, y, y_negative=None, generations=50, population_size=20, mutation_rate=0.1, crossover_rate=0.7, verbose=False):
         """
         Optimizes the pipeline using Genetic Algorithm (GA).
 
@@ -463,7 +463,7 @@ class PipelineOptimizer:
         evaluated = []
         for ind in population:
             self.set_params(ind)
-            _, loss = self.evaluate(X, y)
+            _, loss = self.evaluate(X, y, y_negative)
             evaluated.append((ind, loss))
 
         best_individual = min(evaluated, key=lambda x: x[1])[0].copy()
@@ -488,7 +488,7 @@ class PipelineOptimizer:
             evaluated = []
             for ind in new_population:
                 self.set_params(ind)
-                _, loss = self.evaluate(X, y)
+                _, loss = self.evaluate(X, y, y_negative)
                 evaluated.append((ind, loss))
                 if loss < best_loss:
                     best_loss = loss
@@ -501,7 +501,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_individual, loss_log
     
-    def optimize_GS(self, X, y, max_combinations=100, param_sampling=None, verbose=False):
+    def optimize_GS(self, X, y, y_negative=None, max_combinations=100, param_sampling=None, verbose=False):
         """
         Exhaustively searches all possible parameter combinations (within a limited budget).
 
@@ -545,7 +545,7 @@ class PipelineOptimizer:
             print(f"Iteration {i+1}/{max_combinations}", end="\r") if verbose else None
             params = dict(zip(param_names, combo))
             self.set_params(params)
-            _, loss = self.evaluate(X, y)
+            _, loss = self.evaluate(X, y, y_negative)
 
             if loss <= best_loss:
                 best_loss = loss
@@ -609,7 +609,7 @@ class PipelineOptimizer:
                 params[name] = float(np.clip(x[i], p.min_value, p.max_value))
         return params
 
-    def optimize_BO(self, X_init, y_init, iterations=50, init_points=5, noise_level=0, n_candidates=None, verbose=False):
+    def optimize_BO(self, X_init, y_init, y_init_negative=None, iterations=50, init_points=5, noise_level=0, n_candidates=None, verbose=False):
         """
         Bayesian Optimization using Gaussian Process and Expected Improvement (EI),
         with input normalization and robust handling.
@@ -645,7 +645,7 @@ class PipelineOptimizer:
         for _ in range(init_points):
             sample = {name: p.get_random_value() for name, p in param_defs}
             self.set_params(sample)
-            _, loss = self.evaluate(X_init, y_init)
+            _, loss = self.evaluate(X_init, y_init, y_init_negative)
             X_raw.append(self._encode(sample, param_defs))
             Y.append(min(MAXFLOAT, loss))
 
@@ -687,7 +687,7 @@ class PipelineOptimizer:
             x_next_raw = candidates_raw[np.argmax(ei)]
             params = self._decode(x_next_raw, param_defs)
             self.set_params(params)
-            _, loss = self.evaluate(X_init, y_init)
+            _, loss = self.evaluate(X_init, y_init, y_init_negative)
 
             # update
             X = np.vstack([X, scaler.transform([x_next_raw])])
@@ -705,7 +705,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_params, loss_log
         
-    def optimize(self, X, y, method, verbose=False, **kwargs):
+    def optimize(self, X, y, y_negative=None, method="BO", verbose=False, **kwargs):
         """
         Optimizes the pipeline using the specified method.
 
@@ -726,6 +726,6 @@ class PipelineOptimizer:
         
         optimizer_method = getattr(self, f"optimize_{method}", None)
         if optimizer_method and callable(optimizer_method):
-            return optimizer_method(X, y, verbose=verbose, **kwargs)
+            return optimizer_method(X, y, y_negative, verbose=verbose, **kwargs)
         else:
             raise ValueError(f"Unknown optimization method: {method}")
