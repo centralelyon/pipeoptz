@@ -3,7 +3,47 @@ import importlib
 import os, sys, time
 from collections import deque
 from .node import Node, NodeIf, NodeFor, NodeWhile
-from .utils import product
+
+def _product(*iterables, random=False, max_combinations=0, optimize_memory=False):
+    """
+    Returns the cartesian product of input iterables, with an option for random sampling.
+
+    Args:
+        *iterables: Variable number of iterables to compute the product.
+        random (bool): If True, returns a random sample from the product instead of all combinations.
+        max_combinations (int): The maximum number of combinations to sample.
+        optimize_memory (bool): Have an effect only if random is True and max_combinations > 0. 
+            If True, optimizes memory usage by generating a random product
+            without storing all combinations in memory. But  there is a risk of generating the same 
+            value multiple times. Put to True only if max_combinations << len(all_combinations) or if there is no problem
+            if the same value is repeated.
+
+    Yields:
+        Tuples representing the cartesian product of the input iterables.
+    """
+    len_index = [len(iterable) for iterable in iterables]
+    max_combinations = max_combinations if max_combinations > 0 else np.prod(len_index)
+
+    from random import randrange, shuffle
+    if random and optimize_memory:
+        for i in range(max_combinations):
+            yield tuple(it[randrange(length)] for it, length in zip(iterables, len_index))
+        return
+    
+    from itertools import product as it_product
+    if random:
+        rd_index = list(it_product(*[range(length) for length in len_index]))
+        shuffle(rd_index)
+        for i in range(min(max_combinations, len(rd_index))):
+            yield tuple(iterables[j][rd_index[i][j]] for j in range(len(iterables)))
+        return
+    
+    prod = it_product(*iterables)
+    prod_len_index = 1
+    for length in len_index:
+        prod_len_index *= length
+    for i in range(min(max_combinations, prod_len_index)):
+        yield next(prod)
 
 class Pipeline:
     """
@@ -20,7 +60,7 @@ class Pipeline:
         nodes (dict): A dictionary mapping node IDs to Node objects.
         node_dependencies (dict): A dictionary mapping a node ID to its
             predecessors. The format is:
-            { 'target_node_id': {'target_input_name': 'source_node_id'} }
+            {'target_node_id': {'target_input_name': 'source_node_id'}}
         timer (dict): Stores the execution time for each node after a run.
     """
 
@@ -200,14 +240,13 @@ class Pipeline:
                     inputs[input_param_name] = node_outputs[source_node_id]
             
             if len_loop == float("inf") and multiple_inputs == {}:
-                node_outputs[node_id] = node.execute(inputs, memory=not optimize_memory) if node_id[0]+node_id[-1] != "[]" \
-                                        else node.run(inputs, optimize_memory, skip_failed_loop, debug)
+                node_outputs[node_id] = node.execute(inputs)
             elif multiple_inputs == {}:
                 node_outputs[node_id] = []
                 for i in range(len_loop):
                     try:
                         print(f"Executing node: {node_id} iteration {i+1}/{len_loop}", end="\r") if debug else None
-                        node_outputs[node_id].append(node.execute({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}, memory=False) if node_id[0]+node_id[-1] != "[]" \
+                        node_outputs[node_id].append(node.execute({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}) if node_id[0]+node_id[-1] != "[]" \
                                         else node.run({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}, optimize_memory, skip_failed_loop, debug))
                     except Exception as e:
                         if skip_failed_loop:
@@ -217,10 +256,10 @@ class Pipeline:
                 print() if debug else None
             elif len_loop == float("inf"):
                 node_outputs[node_id] = []
-                for p in product(*multiple_inputs.values()):
+                for p in _product(*multiple_inputs.values()):
                     try:
                         print(f"Executing node: {node_id} with parameters {dict(zip(multiple_inputs.keys(), p))}", end="\r") if debug else None
-                        node_outputs[node_id].append(node.execute({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, memory=False) if node_id[0]+node_id[-1] != "[]" \
+                        node_outputs[node_id].append(node.execute({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}) if node_id[0]+node_id[-1] != "[]" \
                                         else node.run({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, optimize_memory, skip_failed_loop, debug))
                     except Exception as e:
                         if skip_failed_loop:
@@ -233,7 +272,7 @@ class Pipeline:
 
             # If optimize_memory is True, delete outputs of nodes that are no longer needed
             # We check if the output of a predecessor node (dep_id) is still needed by any
-            # of the subsequent nodes in the topological order. If not, we delete it.            
+            # of the subsequent nodes in the topological order. If not, we delete it.
             if optimize_memory:
                 for dep_id in self.node_dependencies.get(node_id, {}).values():
                     still_used = False
@@ -243,12 +282,17 @@ class Pipeline:
                             break
                     if not still_used and not dep_id.startswith("run_params:"):
                         del node_outputs[dep_id]
+                        node.clear_memory()
 
             last_node_id = node_id
             self.timer[node_id] = time.time() - start_time
+            
+        if optimize_memory:
+            for node_id in node_outputs:
+                self.nodes[node_id].clear_memory()
         return last_node_id, node_outputs, (sum(self.timer.values()), self.timer)
 
-    def to_dot(self, filepath=None, generate_png=False, png_filepath=None, cleanup_dot=False, dpi=160, add_optz=False, _prefix=""):
+    def to_dot(self, filepath=None, add_optz=False, _prefix=""):
         """
         Generates a DOT language representation of the pipeline graph.
 
@@ -271,9 +315,6 @@ class Pipeline:
         def escape_id(nid): return f"{_prefix}{nid}"
 
         dot_lines = []
-        if filepath is None and generate_png:
-            filepath = f"{self.name}.dot"
-            cleanup_dot = True
         dot_lines.append("digraph Pipeline {" if _prefix == "" else "subgraph Pipeline {")
         dot_lines.append('  rankdir=TB;')  # vertical layout
         dot_lines.append('  node [fontsize=12 fontname="Helvetica"];')
@@ -366,15 +407,13 @@ class Pipeline:
         if filepath is not None:
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(dot_str)
-        if generate_png:
-            if png_filepath is None:
-                png_filepath = os.path.splitext(filepath)[0] + ".png"
-            res = os.system(f'dot -Tpng -Gdpi={dpi} "{filepath}" -o "{png_filepath}"')
-            if res:
-                print("Error during PNG generation")
-            if cleanup_dot:
-                os.remove(filepath)
         return "\n".join(dot_lines)
+
+    def to_image(self, filepath=None, dpi=160, add_optz=False):
+        res = os.system(f'dot -Tpng -Gdpi={dpi} "{filepath}" -o "{filepath}"')
+        os.remove(os.path.splitext(filepath)[0] + ".dot")
+        if res:
+           print("Error during PNG generation")
 
     def to_json(self, filepath):
         """
@@ -545,3 +584,7 @@ class Pipeline:
                   **{input_param: self.nodes[source_node_id].output 
                         for input_param, source_node_id in self.node_dependencies[node_id].items()}}
         return self.nodes[node_id].execute(inputs, memory=change_memory)
+
+    def clear_memory(self):
+        for node in self.nodes.values():
+            node.clear_memory()

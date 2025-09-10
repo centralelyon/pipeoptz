@@ -40,16 +40,13 @@ class Node:
         self.output = None
         self.input_hash_last_exec = None
 
-    def execute(self, inputs={}, memory=False):
+    def execute(self, inputs={}):
         """
         Executes the node's function with the given inputs.
 
         Args:
             inputs (dict, optional): A dictionary of inputs for the node's function.
                 These are typically the outputs of predecessor nodes. Defaults to {}.
-            memory (bool, optional): If True, the node will cache its output and
-                only re-execute if the inputs have changed since the last run.
-                Defaults to False.
 
         Returns:
             The result of the function execution.
@@ -58,24 +55,20 @@ class Node:
             Exception: Propagates any exception that occurs during the function's
                 execution, after printing debug information.
         """
-        if memory:
-            to_hash = []
-            for v in inputs.values():
-                # hash(-1) == hash(-2) in python
-                to_hash.append(v) if type(v) is not int or v != -1 else to_hash.append(v+1e-16)
-            for i, e in enumerate(to_hash):
-                # to avoid import numpy only for this test
-                if e.__class__.__name__ == "ndarray":
-                    to_hash[i] = e.tobytes()
-            try:
-                current_input_hash = hash(frozenset(to_hash))
-            except TypeError:
-                current_input_hash = None
+        to_hash = []
+        for v in inputs.values():
+            # hash(-1) == hash(-2) in python
+            to_hash.append(v) if type(v) is not int or v != -1 else to_hash.append(v+1e-16)
+        for i, e in enumerate(to_hash):
+            # to avoid import numpy only for this test
+            if e.__class__.__name__ == "ndarray":
+                to_hash[i] = e.tobytes()
         try:
-            if not memory:
-                # Prioritize runtime inputs over fixed_params in case of a name collision
-                return self.func(**{**self.fixed_params, **inputs})
-            elif self.output is None or current_input_hash is None or current_input_hash != self.input_hash_last_exec:
+            current_input_hash = hash(frozenset(to_hash))
+        except TypeError:
+            current_input_hash = None
+        try:
+            if self.output is None or current_input_hash is None or current_input_hash != self.input_hash_last_exec:
                 self.output = self.func(**{**self.fixed_params, **inputs})
                 self.input_hash_last_exec = current_input_hash
             return self.output
@@ -160,7 +153,7 @@ class NodeIf(Node):
         self.skip_failed_loop = skip_failed_loop
         self.debug = debug
 
-    def execute(self, inputs={}, memory=False):
+    def execute(self, inputs={}, optimize_memory=False):
         """
         Evaluates the condition and executes the corresponding sub-pipeline.
 
@@ -170,7 +163,7 @@ class NodeIf(Node):
 
         Args:
             inputs (dict, optional): A dictionary of inputs. Defaults to {}.
-            memory (bool, optional): If True, enables caching within the
+            optimize_memory (bool, optional): If True, does not perform caching within the
                 sub-pipelines. Defaults to False.
 
         Returns:
@@ -183,11 +176,16 @@ class NodeIf(Node):
         for k in condition_inputs:
             del inputs["condition_func:"+k]
         if self.func(**self.fixed_params, **condition_inputs):
-            id, hist, _ = self.true_pipeline.run(run_params=inputs, optimize_memory= not memory, skip_failed_loop=self.skip_failed_loop, debug=self.debug)
+            id, hist, _ = self.true_pipeline.run(run_params=inputs, 
+                                                 optimize_memory= optimize_memory, 
+                                                 skip_failed_loop=self.skip_failed_loop, 
+                                                 debug=self.debug)
         else:
-            id, hist, _ = self.false_pipeline.run(run_params=inputs, optimize_memory= not memory, skip_failed_loop=self.skip_failed_loop, debug=self.debug)
-        if memory:
-            self.output = id, hist
+            id, hist, _ = self.false_pipeline.run(run_params=inputs, 
+                                                  optimize_memory=optimize_memory, 
+                                                  skip_failed_loop=self.skip_failed_loop, 
+                                                  debug=self.debug)
+        self.output = id, hist
         return hist[id]
 
     def get_fixed_params(self):
@@ -279,7 +277,7 @@ class NodeFor(Node):
         self.skip_failed_loop = skip_failed_loop
         self.debug = debug
 
-    def execute(self, inputs={}, memory=False):
+    def execute(self, inputs={}, optimize_memory=False):
         """
         Executes the loop. It requires an 'iterations' input for the number of loops,
         and a 'loop_var' input for the initial value that will be passed from one
@@ -287,7 +285,8 @@ class NodeFor(Node):
 
         Args:
             inputs (dict): Must contain 'iterations' (int) and 'loop_var' (any).
-            memory (bool): Enables caching within the sub-pipeline.
+            optimize_memory (bool, optional): If True, does not perform caching within the
+                sub-pipelines. Defaults to False.
 
         Returns:
             The output of the final iteration.
@@ -306,7 +305,7 @@ class NodeFor(Node):
             try:
                 last_node_id, hist, _ = self.loop_pipeline.run(
                     run_params={'loop_index': i, **inputs},
-                    optimize_memory=not memory,
+                    optimize_memory=optimize_memory,
                     skip_failed_loop=self.skip_failed_loop,
                     debug=self.debug
                 )
@@ -396,7 +395,7 @@ class NodeWhile(Node):
         self.skip_failed_loop = skip_failed_loop
         self.debug = debug
 
-    def execute(self, inputs={}, memory=False):
+    def execute(self, inputs={}, optimize_memory=False):
         """
         Executes the while loop. It requires a 'loop_var' input for the initial value
         that will be passed from one iteration to the next. The loop continues as
@@ -407,7 +406,8 @@ class NodeWhile(Node):
         Args:
             inputs (dict): Must contain 'loop_var' (any). Can also contain
                            'max_iterations' (int) to prevent infinite loops.
-            memory (bool): Enables caching within the sub-pipeline.
+            optimize_memory (bool, optional): If True, does not perform caching within the
+                sub-pipelines. Defaults to False.
 
         Returns:
             The output of the final iteration.
@@ -435,7 +435,7 @@ class NodeWhile(Node):
             try:
                 last_node_id, hist, _ = self.loop_pipeline.run(
                     run_params={'loop_index': i, **inputs},
-                    optimize_memory=not memory,
+                    optimize_memory=optimize_memory,
                     skip_failed_loop=self.skip_failed_loop,
                     debug=self.debug
                 )

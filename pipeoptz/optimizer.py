@@ -3,10 +3,12 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel, ConstantKernel as C
 import numpy as np
 import random as rd
-from scipy.stats import norm
-from .utils import product
 from .parameter import IntParameter, FloatParameter, ChoiceParameter, BoolParameter, MultiChoiceParameter
-from .pipeline import Pipeline
+from .pipeline import Pipeline, _product
+from sklearn.exceptions import ConvergenceWarning
+import warnings
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+from scipy.stats import norm
 
 
 class PipelineOptimizer:
@@ -126,7 +128,7 @@ class PipelineOptimizer:
         results = []
         loss = 0.
         for i, run_param in enumerate(X):
-            index, res, t = self.pipeline.run(run_param, optimize_memory=True)
+            index, res, t = self.pipeline.run(run_param)
             results.append(res[index])
             if is_triplet_loss:
                 loss += self.loss(results[-1], y[i], y_negative[i])
@@ -533,9 +535,9 @@ class PipelineOptimizer:
 
         # We rewrote the product function to handle large search spaces without explicitly listing them all at once.        
         if np.prod([len(v) for v in param_values])>>4 > max_combinations:
-            combinations = product(*param_values, random=True, max_combinations=max_combinations, optimize_memory=True)
+            combinations = _product(*param_values, random=True, max_combinations=max_combinations, optimize_memory=True)
         else:
-            combinations = product(*param_values, random=True, max_combinations=max_combinations)
+            combinations = _product(*param_values, random=True, max_combinations=max_combinations)
 
         best_loss = float("inf")
         best_params = None
@@ -626,10 +628,6 @@ class PipelineOptimizer:
             loss_log (list): Best loss per iteration.
         """
         self.best_params_history = []
-        from sklearn.exceptions import ConvergenceWarning
-        import warnings
-        warnings.filterwarnings("ignore", category=ConvergenceWarning)
-
         MAXFLOAT = 1e100
 
         # Filter out MultiChoiceParameter for simplicity in this implementation

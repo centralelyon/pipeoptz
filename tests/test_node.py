@@ -94,12 +94,12 @@ class TestNode:
         """
         node = Node(id="cache_node", func=mock_func_with_call_tracker)
         
-        result1 = node.execute(inputs={'x': 1}, memory=True)
+        result1 = node.execute(inputs={'x': 1})
         assert result1 == "computed"
         assert mock_func_with_call_tracker.call_count == 1
         assert node.output == "computed"
 
-        result2 = node.execute(inputs={'x': 1}, memory=True)
+        result2 = node.execute(inputs={'x': 1})
         assert result2 == "computed"
         assert mock_func_with_call_tracker.call_count == 1
 
@@ -108,9 +108,9 @@ class TestNode:
         Tests that memory=True re-executes with different inputs.
         """
         node = Node(id="cache_node", func=mock_func_with_call_tracker)
-        node.execute(inputs={'x': 1}, memory=True)
+        node.execute(inputs={'x': 1})
         assert mock_func_with_call_tracker.call_count == 1
-        node.execute(inputs={'x': 2}, memory=True)
+        node.execute(inputs={'x': 2})
         assert mock_func_with_call_tracker.call_count == 2
 
     def test_memory_caching_with_numpy_array(self):
@@ -127,19 +127,19 @@ class TestNode:
         arr1 = np.array([1, 2, 3])
         arr2 = np.array([4, 5, 6])
 
-        res1 = node.execute(inputs={'arr': arr1}, memory=True)
+        res1 = node.execute(inputs={'arr': arr1})
         assert res1 == 6
         assert call_count == 1
 
-        res2 = node.execute(inputs={'arr': arr1}, memory=True)
+        res2 = node.execute(inputs={'arr': arr1})
         assert res2 == 6
         assert call_count == 1
 
-        res3 = node.execute(inputs={'arr': np.array([1, 2, 3])}, memory=True)
+        res3 = node.execute(inputs={'arr': np.array([1, 2, 3])})
         assert res3 == 6
         assert call_count == 1
 
-        res4 = node.execute(inputs={'arr': arr2}, memory=True)
+        res4 = node.execute(inputs={'arr': arr2})
         assert res4 == 15
         assert call_count == 2
 
@@ -149,14 +149,14 @@ class TestNode:
         """
         node = Node(id="cache_node", func=mock_func_with_call_tracker)
         
-        node.execute(inputs={'x': 1}, memory=True)
+        node.execute(inputs={'x': 1})
         assert mock_func_with_call_tracker.call_count == 1
         
         node.clear_memory()
         assert node.output is None
         assert node.input_hash_last_exec is None
 
-        node.execute(inputs={'x': 1}, memory=True)
+        node.execute(inputs={'x': 1})
         assert mock_func_with_call_tracker.call_count == 2
 
     def test_set_fixed_param(self, simple_add_func):
