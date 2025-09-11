@@ -22,7 +22,10 @@ def _product(*iterables, random=False, max_combinations=0, optimize_memory=False
         Tuples representing the cartesian product of the input iterables.
     """
     len_index = [len(iterable) for iterable in iterables]
-    max_combinations = max_combinations if max_combinations > 0 else np.prod(len_index)
+    prod_len_index = 1
+    for length in len_index:
+        prod_len_index *= length
+    max_combinations = max_combinations if max_combinations > 0 else prod_len_index
 
     from random import randrange, shuffle
     if random and optimize_memory:
@@ -39,9 +42,6 @@ def _product(*iterables, random=False, max_combinations=0, optimize_memory=False
         return
     
     prod = it_product(*iterables)
-    prod_len_index = 1
-    for length in len_index:
-        prod_len_index *= length
     for i in range(min(max_combinations, prod_len_index)):
         yield next(prod)
 
@@ -292,7 +292,7 @@ class Pipeline:
                 self.nodes[node_id].clear_memory()
         return last_node_id, node_outputs, (sum(self.timer.values()), self.timer)
 
-    def to_dot(self, filepath=None, add_optz=False, _prefix=""):
+    def to_dot(self, filepath=None, add_optz=False, show_function=True, _prefix=""):
         """
         Generates a DOT language representation of the pipeline graph.
 
@@ -331,7 +331,7 @@ class Pipeline:
                     func_label = "lambda"
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
                 dot_lines.append('    style=dashed;')
-                dot_lines.append(f'    "{full_id}" [shape=diamond, label=< <B>{node_id}</B><BR/><FONT POINT-SIZE="10">{func_label}</FONT> >];')
+                dot_lines.append(f'    "{full_id}" [shape=diamond, label=< <B>{node_id}</B>{f"<BR/><FONT POINT-SIZE=\"10\">{func_label}</FONT>" if show_function else ""} >];')
                 dot_lines.append(node.true_pipeline.to_dot(None, _prefix=full_id + "_T_"))
                 dot_lines.append(node.false_pipeline.to_dot(None, _prefix=full_id + "_F_"))
                 true_first = node.true_pipeline.static_order()[0]
@@ -378,7 +378,7 @@ class Pipeline:
                 func_name = node.func.__name__
                 func_label = f"{func_module}.{func_name}" if func_module != '__main__' else func_name
                 shape = "doubleoctagon" if is_last and _prefix == "" else "box"
-                dot_lines.append(f'  "{full_id}" [shape={shape}, label=< <B>{node_id}</B><BR/><FONT POINT-SIZE="10">{func_label}</FONT> >];')
+                dot_lines.append(f'  "{full_id}" [shape={shape}, label=< <B>{node_id}</B>{f"<BR/><FONT POINT-SIZE=\"10\">{func_label}</FONT>" if show_function else ""} >];')
                 if (param_keys := list(node.get_fixed_params().keys())) != []:
                     dot_lines[-1] = dot_lines[-1][:-3] + f'<BR/><FONT POINT-SIZE="8"><I>({", ".join(param_keys)})</I></FONT> >];'
                     
@@ -409,11 +409,12 @@ class Pipeline:
                 f.write(dot_str)
         return "\n".join(dot_lines)
 
-    def to_image(self, filepath=None, dpi=160, add_optz=False):
-        res = os.system(f'dot -Tpng -Gdpi={dpi} "{filepath}" -o "{filepath}"')
-        os.remove(os.path.splitext(filepath)[0] + ".dot")
+    def to_image(self, filepath=None, dpi=160, add_optz=False, show_function=True):
+        self.to_dot(os.path.splitext(filepath)[0] + ".dot", add_optz=add_optz, show_function=show_function)
+        res = os.system(f'dot -Tpng -Gdpi={dpi} "{os.path.splitext(filepath)[0] + ".dot"}" -o "{filepath}"')
         if res:
            print("Error during PNG generation")
+        os.remove(os.path.splitext(filepath)[0] + ".dot")
 
     def to_json(self, filepath):
         """
