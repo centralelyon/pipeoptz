@@ -300,14 +300,6 @@ class Pipeline:
 
         Args:
             filepath (str, optional): The path to save the .dot file. If None, no .dot file is saved.
-            generate_png (bool, optional): If True and `filepath` is provided,
-                generates a PNG image from the DOT file using the `dot` command.
-                Defaults to False. It is needed to create the .dot file.
-            png_filepath (str, optional): The path for the output PNG file. If None,
-                it's derived from the `filepath`. Defaults to None.
-            cleanup_dot (bool, optional): If True, deletes the .dot file after PNG is generated.
-                Defaults to False.
-            dpi (int): dpi of the PNG file.
         
         Returns:
             the DOT string of the pipeline
@@ -331,7 +323,10 @@ class Pipeline:
                     func_label = "lambda"
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
                 dot_lines.append('    style=dashed;')
-                dot_lines.append(f'    "{full_id}" [shape=diamond, label=< <B>{node_id}</B>{f"<BR/><FONT POINT-SIZE=\"10\">{func_label}</FONT>" if show_function else ""} >];')
+                if show_function:
+                    dot_lines.append(f'    "{full_id}" [shape=diamond, label=< <B>{node_id}</B> <BR/><FONT POINT-SIZE=\"10\">{func_label}</FONT> >];')
+                else:
+                    dot_lines.append(f'    "{full_id}" [shape=diamond, label=< <B>{node_id}</B> >];')
                 dot_lines.append(node.true_pipeline.to_dot(None, _prefix=full_id + "_T_"))
                 dot_lines.append(node.false_pipeline.to_dot(None, _prefix=full_id + "_F_"))
                 true_first = node.true_pipeline.static_order()[0]
@@ -378,7 +373,10 @@ class Pipeline:
                 func_name = node.func.__name__
                 func_label = f"{func_module}.{func_name}" if func_module != '__main__' else func_name
                 shape = "doubleoctagon" if is_last and _prefix == "" else "box"
-                dot_lines.append(f'  "{full_id}" [shape={shape}, label=< <B>{node_id}</B>{f"<BR/><FONT POINT-SIZE=\"10\">{func_label}</FONT>" if show_function else ""} >];')
+                if show_function:
+                    dot_lines.append(f'    "{full_id}" [shape={shape}, label=< <B>{node_id}</B> <BR/><FONT POINT-SIZE=\"10\">{func_label}</FONT> >];')
+                else:
+                    dot_lines.append(f'    "{full_id}" [shape={shape}, label=< <B>{node_id}</B> >];')
                 if (param_keys := list(node.get_fixed_params().keys())) != []:
                     dot_lines[-1] = dot_lines[-1][:-3] + f'<BR/><FONT POINT-SIZE="8"><I>({", ".join(param_keys)})</I></FONT> >];'
                     
