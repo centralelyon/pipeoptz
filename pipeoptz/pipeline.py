@@ -409,7 +409,10 @@ class Pipeline:
 
     def to_image(self, filepath=None, dpi=160, add_optz=False, show_function=True):
         self.to_dot(os.path.splitext(filepath)[0] + ".dot", add_optz=add_optz, show_function=show_function)
-        res = os.system(f'dot -Tpng -Gdpi={dpi} "{os.path.splitext(filepath)[0] + ".dot"}" -o "{filepath}"')
+        try:
+            res = os.system(f'dot -Tpng -Gdpi={dpi} "{os.path.splitext(filepath)[0] + ".dot"}" -o "{filepath}"')
+        except Exception as e:
+            raise Exception("Error during PNG generation.\n Do you have graphviz installed ?", e)
         if res:
            print("Error during PNG generation")
         os.remove(os.path.splitext(filepath)[0] + ".dot")
