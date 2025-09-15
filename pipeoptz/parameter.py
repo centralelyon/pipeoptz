@@ -50,6 +50,9 @@ class Parameter:
         """
         raise NotImplementedError("This method must be implemented in subclasses.")
 
+    def get_description(self):
+        raise NotImplementedError("This method must be implemented in subclasses.")
+
 
 class IntParameter(Parameter):
     """
@@ -68,7 +71,7 @@ class IntParameter(Parameter):
     MAXINT = 2**63 - 1
     MININT = -2**63
 
-    def __init__(self, node_id, param_name, min_value, max_value):
+    def __init__(self, node_id, param_name, min_value, max_value, step=1):
         """
         Initializes an IntParameter.
 
@@ -89,22 +92,8 @@ class IntParameter(Parameter):
         super(IntParameter, self).__init__(node_id, param_name)
         self.min_value = max(min_value, self.MININT)
         self.max_value = min(max_value, self.MAXINT)
+        self.step = step
         self.get_random_value(True)
-    
-    def get_parametric_space(self):
-        """
-        Returns the description of the parameter's search space.
-
-        Returns:
-            dict: A dictionary describing the parameter type, dimension, and range size.
-        """
-        if self.min_value == self.MININT:
-            range_size = float('inf')
-        elif self.max_value == self.MAXINT:
-            range_size = float('inf')
-        else:
-            range_size = self.max_value - self.min_value
-        return {"type": int, "dim": 1, "range_size": range_size}
     
     def set_value(self, value):
         """
@@ -120,6 +109,8 @@ class IntParameter(Parameter):
             raise ValueError(f"Value must be an integer, but 'value' is of type {type(value)}.")
         elif value < self.min_value or value > self.max_value:
             raise ValueError("Value must be between {self.min_value} and {self.max_value}.")
+        elif value-self.min_value % self.step:
+            raise ValueError(f"Value must be in range({self.min_value}, {self.max_value+1}, {self.step}).")
         self.value = value
 
     def get_value(self):
@@ -137,10 +128,13 @@ class IntParameter(Parameter):
         Returns:
             int: A random integer.
         """
-        r = rd.randint(self.min_value, self.max_value)
+        r = rd.randrange(self.min_value, self.max_value+1, self.step)
         if set_value:
             self.set_value(r)
         return r
+
+    def get_description(self) -> dict:
+        return {"type": "int", "value": self.value, "min": self.min_value, "max": self.max_value, "step": self.step}
 
 
 class FloatParameter(Parameter):
@@ -160,7 +154,7 @@ class FloatParameter(Parameter):
     MAXFLOAT = 1.7976931348623157e+308
     MINFLOAT = -1.7976931348623157e+308
 
-    def __init__(self, node_id, param_name, min_value, max_value):
+    def __init__(self, node_id, param_name, min_value, max_value, step=0):
         """
         Initializes a FloatParameter.
 
@@ -182,22 +176,8 @@ class FloatParameter(Parameter):
         super(FloatParameter, self).__init__(node_id, param_name)
         self.min_value = max(float(min_value), self.MINFLOAT)
         self.max_value = min(float(max_value), self.MAXFLOAT)
+        self.step = step
         self.get_random_value(True)
-
-    def get_parametric_space(self):
-        """
-        Returns the description of the parameter's search space.
-
-        Returns:
-            dict: A dictionary describing the parameter type and range size.
-        """
-        if self.min_value == self.MINFLOAT:
-            range_size = float('inf')
-        elif self.max_value == self.MAXFLOAT:
-            range_size = float('inf')
-        else:
-            range_size = self.max_value - self.min_value
-        return {"type": float, "range_size": range_size}
 
     def set_value(self, value):
         """
@@ -213,6 +193,8 @@ class FloatParameter(Parameter):
             raise ValueError(f"The value must be a float, but 'value' is of type {type(value)}.")
         elif value < self.min_value or value > self.max_value:
             raise ValueError(f"Value must be between {self.min_value} and {self.max_value}.")
+        elif self.step and value-self.min_value % self.step:
+            raise ValueError(f"Value must be in range({self.min_value}, {self.max_value} included, {self.step}).")
         self.value = float(value)
     
     def get_value(self):
@@ -231,10 +213,13 @@ class FloatParameter(Parameter):
             float: A random float.
         """
         r = rd.uniform(self.min_value, self.max_value)
+        r = r - r%self.step if self.step else r
         if set_value:
             self.set_value(r)
         return r
 
+    def get_description(self):
+        return {"type": "float", "value": self.value, "min": self.min_value, "max": self.max_value, "step": self.step}
 
 class ChoiceParameter(Parameter):
     """
@@ -261,16 +246,7 @@ class ChoiceParameter(Parameter):
         super(ChoiceParameter, self).__init__(node_id, param_name)
         self.choices = choices
         self.get_random_value(True)
-    
-    def get_parametric_space(self):
-        """
-        Returns the description of the parameter's search space.
-
-        Returns:
-            dict: A dictionary describing the parameter type and the number of choices.
-        """
-        return {"type": None, "range_size": len(self.choices)}
-    
+      
     def set_value(self, value):
         """
         Sets the value of the parameter, ensuring it is a valid choice.
@@ -304,7 +280,9 @@ class ChoiceParameter(Parameter):
         if set_value:
             self.set_value(r)
         return r
-    
+
+    def get_description(self):
+        return {"type": "choice", "value": self.value, "choices": self.choices}
 
 class MultiChoiceParameter(Parameter):
     """
@@ -358,17 +336,6 @@ class MultiChoiceParameter(Parameter):
         self._C =  [comb(n, k) for k in range(self.min_choices, self.max_choices + 1)]
         self.get_random_value(True)
 
-    def get_parametric_space(self):
-        """
-        Returns the description of the parameter's search space.
-
-        The range size is the total number of possible combinations.
-
-        Returns:
-            dict: A dictionary describing the parameter type and range size.
-        """
-        return {"type": None, "range_size": sum(self._C)}
-
     def set_value(self, value):
         """
         Sets the value of the parameter, ensuring it is a valid sub-list of choices.
@@ -410,6 +377,8 @@ class MultiChoiceParameter(Parameter):
             self.set_value(r)
         return r
 
+    def get_description(self):
+        return {"type": "multichoice", "value": self.value, "choices": self.choices, "min_choices": self.min_choices, "max_choices": self.max_choices}
 
 class BoolParameter(Parameter):
     """
@@ -430,15 +399,6 @@ class BoolParameter(Parameter):
         """
         super(BoolParameter, self).__init__(node_id, param_name)
         self.get_random_value(True)
-
-    def get_parametric_space(self):
-        """
-        Returns the description of the parameter's search space.
-
-        Returns:
-            dict: A dictionary describing the parameter type and range size (2).
-        """
-        return {"type": bool, "range_size": 2}
 
     def set_value(self, value):
         """
@@ -473,3 +433,6 @@ class BoolParameter(Parameter):
         if set_value:
             self.set_value(r)
         return r
+
+    def get_description(self):
+        return {"type": "bool", "value": self.value}
