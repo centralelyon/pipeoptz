@@ -188,7 +188,11 @@ class FloatParameter(Parameter):
             raise ValueError(f"Value must be between {self.min_value} and {self.max_value}.")
         elif self.step and (value-self.min_value) % self.step > self.step/10:
             raise ValueError(f"Value must be in range({self.min_value}, {self.max_value} included, {self.step}).")
-        self.value = float(value)
+        
+        if self.step:
+            self.value = float(value-(value-self.min_value)%self.step)
+        else:
+            self.value = float(value)
     
     def get_value(self):
         """Returns the current value of the parameter."""
@@ -206,7 +210,8 @@ class FloatParameter(Parameter):
             float: A random float.
         """
         r = rd.uniform(self.min_value, self.max_value)
-        r -= - (r%self.step) if self.step else 0
+        if self.step:
+            r -= (r-self.min_value)%self.step
         if set_value:
             self.set_value(r)
         return r

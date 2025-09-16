@@ -3,7 +3,7 @@ import numpy as np
 from math import comb
 
 import sys, os
-sys.path.append(os.path.abspath("../"))
+sys.path.append(os.path.abspath("../src/"))
 from pipeoptz.parameter import (
     Parameter,
     IntParameter,
@@ -23,9 +23,9 @@ class TestParameter:
         """
         p = Parameter("node1", "param1")
         with pytest.raises(NotImplementedError):
-            p.get_parametric_space()
-        with pytest.raises(NotImplementedError):
             p.get_random_value()
+        with pytest.raises(NotImplementedError):
+            p.get_description()
 
     def test_base_class_set_get_value(self):
         """
@@ -92,6 +92,13 @@ class TestIntParameter:
         with pytest.raises(ValueError, match="Value must be between"):
             p.set_value(-1)
 
+    def test_set_value_with_step(self):
+        p = IntParameter("node1", "p1", 0, 10, step=2)
+        p.set_value(4)
+        assert p.get_value() == 4
+        with pytest.raises(ValueError, match="Value must be in range"):
+            p.set_value(5)
+
     def test_get_random_value(self):
         """
         Tests the get_random_value method of an IntParameter.
@@ -99,6 +106,12 @@ class TestIntParameter:
         p = IntParameter("node1", "p1", 5, 5)
         val = p.get_random_value()
         assert val == 5
+
+    def test_get_random_value_with_step(self):
+        p = IntParameter("node1", "p1", 0, 10, step=2)
+        for _ in range(20):
+            val = p.get_random_value()
+            assert val % 2 == 0
 
     def test_get_random_value_sets_value(self):
         """
@@ -110,13 +123,11 @@ class TestIntParameter:
         assert p.get_value() == rand_val
         assert old_val != rand_val  # High probability
 
-    def test_get_parametric_space(self):
-        """
-        Tests the get_parametric_space method of an IntParameter.
-        """
-        p = IntParameter("node1", "p1", 0, 10)
-        space = p.get_parametric_space()
-        assert space == {"type": int, "dim": 1, "range_size": 10}
+    def test_get_description(self):
+        p = IntParameter("node1", "p1", 0, 10, step=2)
+        p.set_value(4)
+        desc = p.get_description()
+        assert desc == {"type": "int", "value": 4, "min": 0, "max": 10, "step": 2}
 
 
 # --- FloatParameter tests ---
@@ -157,10 +168,18 @@ class TestFloatParameter:
         with pytest.raises(ValueError, match="Value must be between"):
             p.set_value(10.1)
 
-    def test_get_parametric_space(self):
-        p = FloatParameter("node1", "p1", 0.0, 10.0)
-        space = p.get_parametric_space()
-        assert space == {"type": float, "range_size": 10.0}
+    def test_set_value_with_step(self):
+        p = FloatParameter("node1", "p1", 0.0, 1.0, step=0.25)
+        p.set_value(0.5)
+        assert p.get_value() == 0.5
+        with pytest.raises(ValueError, match="Value must be in range"):
+            p.set_value(0.6)
+
+    def test_get_description(self):
+        p = FloatParameter("node1", "p1", 0.0, 10.0, step=0.5)
+        p.set_value(5.5)
+        desc = p.get_description()
+        assert desc == {"type": "float", "value": 5.5, "min": 0.0, "max": 10.0, "step": 0.5}
 
 
 # --- ChoiceParameter tests ---
@@ -200,13 +219,11 @@ class TestChoiceParameter:
         rand_val = p.get_random_value()
         assert rand_val in choices
 
-    def test_get_parametric_space(self):
-        """
-        Tests the get_parametric_space method of a ChoiceParameter.
-        """
+    def test_get_description(self):
         p = ChoiceParameter("node1", "p1", ["a", "b", "c"])
-        space = p.get_parametric_space()
-        assert space == {"type": None, "range_size": 3}
+        p.set_value("b")
+        desc = p.get_description()
+        assert desc == {"type": "choice", "value": "b", "choices": ["a", "b", "c"]}
 
 
 # --- MultiChoiceParameter tests ---
@@ -292,16 +309,12 @@ class TestMultiChoiceParameter:
         assert 2 <= len(rand_val) <= 4
         assert all(item in choices for item in rand_val)
 
-    def test_get_parametric_space(self):
-        """
-        Tests the get_parametric_space method of a MultiChoiceParameter.
-        """
-        choices = ["a", "b", "c", "d"]  # n=4
+    def test_get_description(self):
+        choices = ["a", "b", "c", "d"]
         p = MultiChoiceParameter("node1", "p1", choices, min_choices=2, max_choices=3)
-        # C(4,2) + C(4,3) = 6 + 4 = 10
-        expected_size = comb(4, 2) + comb(4, 3)
-        space = p.get_parametric_space()
-        assert space == {"type": None, "range_size": expected_size}
+        p.set_value(["a", "d"])
+        desc = p.get_description()
+        assert desc == {"type": "multichoice", "value": ["a", "d"], "choices": choices, "min_choices": 2, "max_choices": 3}
 
 
 # --- BoolParameter tests ---
@@ -340,10 +353,8 @@ class TestBoolParameter:
         rand_val = p.get_random_value()
         assert isinstance(rand_val, bool)
 
-    def test_get_parametric_space(self):
-        """
-        Tests the get_parametric_space method of a BoolParameter.
-        """
+    def test_get_description(self):
         p = BoolParameter("node1", "p1")
-        space = p.get_parametric_space()
-        assert space == {"type": bool, "range_size": 2}
+        p.set_value(True)
+        desc = p.get_description()
+        assert desc == {"type": "bool", "value": True}
