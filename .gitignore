@@ -19,3 +19,5 @@ venv/
 
 # OS specific
 *.DS_Store
+
+src/pipeoptz.egg-info
