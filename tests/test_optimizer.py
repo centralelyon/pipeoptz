@@ -162,11 +162,8 @@ class TestOptimizerMethods:
                 p for p in optimizer_instance.params_to_optimize if not isinstance(p, MultiChoiceParameter)
             ]
 
-        warnings.filterwarnings("error")
-        try:
-            best_params, loss_log = optimizer_instance.optimize(X, y, method=method, **kwargs)
-        except Warning:
-            pass
+        warnings.filterwarnings("ignore")
+        best_params, loss_log = optimizer_instance.optimize(X, y, method=method, **kwargs)
         warnings.resetwarnings()
 
         assert isinstance(best_params, dict)

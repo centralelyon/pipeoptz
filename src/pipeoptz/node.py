@@ -1,5 +1,8 @@
+from __future__ import annotations
 import numpy as np
-from typing import Any, Callable, Dict, Optional, Union, List
+from typing import Any, Callable, Dict, Optional, Union, List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .pipeline import Pipeline
 
 class Node:
     """
@@ -127,10 +130,10 @@ class NodeIf(Node):
         true_pipeline (Pipeline): The pipeline to execute if the condition is True.
         false_pipeline (Pipeline): The pipeline to execute if the condition is False.
     """
-    def __init__(self, id: str, condition_func: Callable[..., bool], true_pipeline: 'Pipeline', false_pipeline: 'Pipeline', fixed_params: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, id: str, condition_func: Callable[..., bool], true_pipeline: Pipeline, false_pipeline: Pipeline, fixed_params: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(id, condition_func, fixed_params=fixed_params)
-        self.true_pipeline: 'Pipeline' = true_pipeline
-        self.false_pipeline: 'Pipeline' = false_pipeline
+        self.true_pipeline: Pipeline = true_pipeline
+        self.false_pipeline: Pipeline = false_pipeline
         self.skip_failed_loop: bool = False
         self.debug: bool = False
     
@@ -240,7 +243,7 @@ class NodeFor(Node):
     Attributes:
         loop_pipeline (Pipeline): The pipeline to execute at each iteration.
     """
-    def __init__(self, id: str, loop_pipeline: 'Pipeline', fixed_params: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, id: str, loop_pipeline: Pipeline, fixed_params: Optional[Dict[str, Any]] = None) -> None:
         """
         Initializes a NodeFor.
 
@@ -254,7 +257,7 @@ class NodeFor(Node):
         elif 'iterations' not in fixed_params or len(fixed_params) >= 2:
             raise ValueError("Only 'iterations' is allowed as a fixed parameter.")
         super().__init__(id, func=lambda **kwargs: kwargs, fixed_params=fixed_params)
-        self.loop_pipeline: 'Pipeline' = loop_pipeline
+        self.loop_pipeline: Pipeline = loop_pipeline
         self.skip_failed_loop: bool = False
         self.debug: bool = False
 
@@ -365,7 +368,7 @@ class NodeWhile(Node):
     Attributes:
         loop_pipeline (Pipeline): The pipeline to execute at each iteration.
     """
-    def __init__(self, id: str, condition_func: Callable[..., bool], loop_pipeline: 'Pipeline', fixed_params: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, id: str, condition_func: Callable[..., bool], loop_pipeline: Pipeline, fixed_params: Optional[Dict[str, Any]] = None) -> None:
         """
         Initializes a NodeWhile.
 
@@ -376,7 +379,7 @@ class NodeWhile(Node):
             fixed_params (dict, optional): Fixed parameters for this node.
         """
         super().__init__(id, func=condition_func , fixed_params=fixed_params)
-        self.loop_pipeline: 'Pipeline' = loop_pipeline
+        self.loop_pipeline: Pipeline = loop_pipeline
         self.skip_failed_loop: bool = False
         self.debug: bool = False
 
