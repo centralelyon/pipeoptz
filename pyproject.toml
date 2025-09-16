@@ -23,7 +23,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/centralelyon/pipeoptz"
+Homepage = "https://github.com/centralelyon/pipeoptz"
+Issues   = "https://github.com/centralelyon/pipeoptz/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

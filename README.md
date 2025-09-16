@@ -1,244 +1,113 @@
-# PipeOptz: Pipeline Optimization Framework
+# PipeOptz: A Framework for Pipeline Optimization
 
-[![PyPI version](https://badge.fury.io/py/pipeoptz.svg)](https://badge.fury.io/py/pipeoptz)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/release/python-390/)
+<p align="center">
+  <a href="https://pypi.org/project/pipeoptz/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pipeoptz"></a>
+  <a href="https://github.com/centralelyon/pipeoptz/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/centralelyon/pipeoptz/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://pypi.org/project/pipeoptz/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/pipeoptz"></a>
+  <a href="https://github.com/centralelyon/pipeoptz/blob/main/LICENSE"><img alt="PyPI - License" src="https://img.shields.io/pypi/l/pipeoptz"></a>
+</p>
 
-**PipeOptz** is a Python library for optimizing the parameters of processing pipelines. It is particularly suited for tasks in image processing, but its generic design allows it to be applied to any domain where a sequence of operations needs to be tuned to achieve an optimal result.
+**PipeOptz** is a Python library for building, visualizing, and optimizing complex processing pipelines. It allows you to define a series of operations as a graph, manage the flow of data, and then automatically tune the parameters of those operations to achieve a desired outcome.
 
-The core idea is to represent a workflow as a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph) (DAG) of processing **Nodes**. The library then uses various metaheuristic optimization algorithms to find the best set of parameters for these nodes to minimize a given loss function.
+While it can be used for any sequence of operations, it is particularly powerful for optimizing image processing workflows.
 
 ## Core Concepts
 
-The library is built around a few key components:
+The library is built around a few key ideas:
 
-### `Node`
-A `Node` represents a single, executable step in the pipeline. It's a wrapper around a Python function that contains its own set of fixed parameters.
+- **`Node`**: A `Node` is the basic building block of a pipeline. It wraps a single Python function and its parameters.
 
-```python
-def gaussian_blur(image, k, sigma):
-    # Kernel size must be an odd integer
-    k = int(k) * 2 + 1
-    return cv2.GaussianBlur(image, (k, k), sigmaX=sigma)
+- **`Pipeline`**: The `Pipeline` holds the entire workflow. You add nodes to it and define their dependencies, forming a Directed Acyclic Graph (DAG). The pipeline manages the execution order.
 
-# A node that applies a Gaussian blur with a fixed kernel size and sigma
-blur_node = Node(id="blur", func=gaussian_blur, fixed_params={'k': 5, 'sigma': 1.0})
-```
+- **`Parameter`**: A `Parameter` defines the search space for a value you want to optimize. The library provides different types, like `IntParameter`, `FloatParameter`, and `ChoiceParameter`.
 
-### `NodeIf`
-A special type of node that allows for conditional branching within the pipeline. It executes one of two sub-pipelines (`true_pipeline` or `false_pipeline`) based on the boolean output of a `condition_func`.
+- **`PipelineOptimizer`**: This is the engine that tunes your pipeline. It takes your pipeline, a set of `Parameter`s to vary, and a `loss_function` to minimize, and uses metaheuristic algorithms (like Genetic Algorithms, Bayesian Optimization, etc.) to find the best parameter values.
 
-### `Pipeline`
-The `Pipeline` object manages the collection of nodes and their dependencies, forming a DAG. It determines the correct execution order and handles the flow of data from one node's output to another's input.
+## Installation
 
-### `Parameter`
-These objects define the search space for the optimization. They specify which node parameters are tunable and their possible range of values. Subclasses exist for different data types:
-- `IntParameter`: An integer within a min/max range (e.g., 1 to 10).
-- `FloatParameter`: A float within a min/max range (e.g., 0.0 to 1.0).
-- `ChoiceParameter`: A value from a predefined list of options (e.g., ['option1', 'option2']).
-- `BoolParameter`: A binary value (`True` or `False`).
-- `MultiChoiceParameter`: A sub-list of choices from a list of options within a min/max length range (e.g., choose 1 to 4 items from ['option1', 'option2', 'option3', 'option4']).
-
-### `PipelineOptimizer`
-This is the main engine for the optimization process. It takes as input the `Pipeline`, a `loss_function` to minimize, and the `Parameter` objects to tune. It provides a simple interface to run various optimization algorithms. It outputs a pipeline with optimized parameters.
-
-## Utility Functions (`utils.py`)
-
-The `pipeoptz.utils` module provides a collection of helper functions commonly used in image processing pipelines. These can be used directly within your `Node` functions or in the optimizer as a loss function.
-
-Some of the available functions include:
-
-- **Image Manipulation**: `rotate`, `min_size` (crop to content), `remove_alpha`.
-- **Color Operations**: `extract_palette`, `recolor`, `remove_color`.
-- **Feature Detection**: `find_circle`, `find_line` using Hough Transforms.
-- **Segmentation & Analysis**: `isolate` (find connected components), `slic` (superpixel segmentation), `get_pos` (get bounding box).
-- **Loss Functions**: A ready-to-use `mse_loss` (Mean Squared Error), which is useful for the `loss_function` argument of the `PipelineOptimizer`.
-- **Geometric Helpers**: `get_angle_min_area` to find the optimal rotation for an object.
-
-These utilities are designed to speed up the process of building complex image analysis workflows.
-
-## Setup and Installation
-
-Currently, PipeOptz is not yet available on PyPI. You can install it directly from the source code:
+Install PipeOptz from PyPI:
 
 ```bash
-git clone https://github.com/your-username/pipeoptz.git
-cd pipeoptz
+pip install pipeoptz
 ```
 
-
-
-### Using `venv` (recommended)
-
-1. **Create a virtual environment:**
+For image processing, you will also need OpenCV, which can be installed alongside:
 
 ```bash
-python -m venv venv
+pip install pipeoptz opencv-python
 ```
 
-2. **Activate the environment:**
+## Usage: A Simple Example
 
-* On macOS/Linux:
-
-```bash
-source venv/bin/activate
-```
-* On Windows:
-
-```bash
-venv\Scripts\activate
-```
-
-3. **Install the module:**
-
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-Basic usage:
-
-```python
-import pipeoptz
- 
-pipeoptz.__version__  # Example usage
-```
-
-## Quick Start: Optimizing an Image Processing Pipeline
-
-Let's walk through a simple example: finding the optimal parameters for a Gaussian blur and a thresholding operation to clean up a noisy, blurry image of a circle.
-
-### 1. Define Node Functions
-
-First, we define the Python functions that will serve as our processing steps.
-
-```python
-import cv2
-import numpy as np
-
-def gaussian_blur(image, k, sigma):
-    # The kernel size needs to be an odd integer
-    k = int(k) * 2 + 1
-    return cv2.GaussianBlur(image, (k, k), sigmaX=sigma)
-
-def threshold(image, threshold_value):
-    _, thresh_img = cv2.threshold(image, threshold_value, 255, cv2.THRESH_BINARY)
-    # Create a copy to avoid modifying the original array in place
-    im = image.copy()
-    im[thresh_img == 0] = 0
-    return im
-```
-
-### 2. Build the Pipeline
-
-Next, we create a `Pipeline` instance and add our functions as `Node`s. We define the data flow using the `predecessors` argument.
-
-- The `blur` node gets its `image` from the pipeline's runtime input (`run_params:image`).
-- The `threshold` node gets its `image` from the output of the `blur` node.
+Let's create a basic pipeline with a few arithmetic operations to see how it works.
 
 ```python
 from pipeoptz import Pipeline, Node
 
-pipeline = Pipeline(name="simple_im_pipeline_opz")
+# 1. Define the functions your nodes will execute
+def add(x, y):
+    return x + y
 
-# Add a blur node
-pipeline.add_node(
-    Node(id="blur", func=gaussian_blur, fixed_params={'k': 5, 'sigma': 1.0}), 
-    predecessors={'image': 'run_params:image'}
-)
+def multiply(a, b):
+    return a * b
 
-# Add a threshold node that takes its input from the 'blur' node
-pipeline.add_node(
-    Node(id="threshold", func=threshold, fixed_params={'threshold_value': 127}), 
-    predecessors={'image': 'blur'}
-)
+# 2. Create a pipeline
+pipeline = Pipeline(name="arithmetic_pipeline")
 
-node_id, history, times = pipeline.run({'image':numpy_image})
+# 3. Create nodes and add them to the pipeline with dependencies
+# Node A: 5 + 3 = 8
+pipeline.add_node(Node(id="A", func=add, fixed_params={"x": 5, "y": 3}))
 
-print("Execution time :", times[0])
-plt.imshow(history[node_id])
+# Node B: Takes the output of A as input -> 8 * 10 = 80
+pipeline.add_node(Node(id="B", func=multiply, fixed_params={"b": 10}), predecessors={"a": "A"})
+
+# Node C: Takes the output of B as input -> 80 + 1 = 81
+pipeline.add_node(Node(id="C", func=add, fixed_params={"y": 1}), predecessors={"x": "B"})
+
+
+# 4. Run the pipeline
+# The result is a tuple: (last_node_id, history_of_all_node_outputs, execution_times)
+last_node, history, _ = pipeline.run()
+
+print(f"Pipeline finished at node: {last_node}")
+print(f"Result of final node 'C': {history[last_node]}")
+print(f"History of all node outputs: {history}")
+
+# 5. Visualize the pipeline
+# This creates a .dot file and a .png image of the graph
+pipeline.to_dot("pipeline_example.dot", generate_png=True)
 ```
 
-The pipeline output is a tuple of three elements:
-- `id`: The output of the last executed node in the pipeline. It is this node whose will be used as the input for the loss function.
-- `history`: A dictionary containing the outputs of all nodes in the pipeline, keyed by their `id`. If `optimize_memory=True` (`False` by default) the history will contain the output only of the output nodes.
-- `times`: A tuple containing the global pipeline execution time and a dictionary containing the execution time of each node, keyed by their `id`.
+This script will output:
 
-You can save the pipeline to re-use it later in a JSON format or visualize the pipeline using GraphViz and generate a .DOT file.
-
-```python
-pipeline.to_json("path.json")
-pipeline2 = Pipeline.from_json("path.json")
-
-pipeline.to_dot("path.dot", generate_png=True)
-plt.imshow("path.png")
 ```
-<center><img src="examples/mmm_example/simple_im_pipeline_opz.png" alt="image" width="auto" height="300px"></center>
-
-
-### 3. Set up the Optimizer
-
-We define which parameters we want to optimize and their search space. We'll tune `sigma` and `k` for the blur, and `threshold_value` for the threshold.
-
-```python
-from pipeoptz import PipelineOptimizer, FloatParameter, IntParameter, mse_loss
-
-# We need some sample data (X) and a target/ground truth (y)
-# For this example, assume generate_data() creates a noisy image X and a clean image y
-X, y = generate_data() 
-
-# The optimizer needs the pipeline, a loss function, and a timeout
-optimizer = PipelineOptimizer(
-    pipeline=pipeline,
-    loss_function=mse_loss, # Mean Squared Error
-    max_time_pipeline=0.01 # If the pipeline take more than this time the pipeline is considered to have failed and its loss will be set to infinity. Set to 0 to disable it. 
-)
-
-# Define the search space for each parameter
-optimizer.add_param(FloatParameter(node_id='blur', param_name='sigma', min_value=0.1, max_value=20.0))
-optimizer.add_param(IntParameter(node_id='blur', param_name='k', min_value=1, max_value=10))
-optimizer.add_param(IntParameter(node_id='threshold', param_name='threshold_value', min_value=1, max_value=254))
+Pipeline finished at node: C
+Result of final node 'C': 81
+History of all node outputs: {'A': 8, 'B': 80, 'C': 81}
 ```
 
-### 4. Run the Optimization
+And it will generate an image (`pipeline_example.png`) of your pipeline's structure:
 
-Finally, we can run the optimization using one of the available methods. Let's use the Genetic Algorithm (GA).
+<div align="center">
+  <img src="examples/basic/pipeline_example.png" alt="Simple Pipeline Graph"/>
+</div>
 
-```python
-# The optimizer takes a list of inputs X and a list of corresponding targets y
-X_batch = [{"image": Xi} for Xi in generate_multiple_images()]
-y_batch = [yi for yi in generate_multiple_targets()]
+## Optimizing a Pipeline
 
-best_params, loss_log = optimizer.optimize(
-    X_batch, y_batch,
-    method="GA", 
-    generations=50,
-    population_size=20,
-    verbose=True
-)
+The real power of `PipeOptz` comes from optimization. The simple example above uses fixed parameters, but you can easily make them tunable.
 
-print("Best parameters found:")
-print(best_params)
-```
+To do this, you would:
+1.  Create a `PipelineOptimizer`.
+2.  Define which parameters to tune using objects like `IntParameter` or `FloatParameter`.
+3.  Provide a `loss_function` that calculates how "good" the pipeline's output is.
+4.  Run the `optimizer.optimize()` method.
 
-The optimizer will iterate through generations and find the parameter set that minimizes the `mse_loss` between the pipeline's output and the target image `y`. The loss function must take two arguments: the pipeline's output and the ground truth and return a float.
+For a complete, runnable optimization example, please see the Jupyter Notebook at: **`examples/advanced/simple.ipynb`**.
 
-## Supported Optimization Algorithms
+## Contributing
 
-PipeOptz provides a unified interface for several common metaheuristic algorithms. You can select the method via the `method` argument in the `optimize()` call.
+Contributions are welcome! If you have suggestions for improvements or find a bug, please feel free to open an issue or submit a pull request.
 
-- **`GS`**: Grid Search
-- **`BO`**: Bayesian Optimization
-- **`GA`**: Genetic Algorithm
-- **`ACO`**: Ant Colony Optimization
-- **`SA`**: Simulated Annealing
-- **`PSO`**: Particle Swarm Optimization
+## License
 
-Each method has its own set of hyperparameters that can be passed as keyword arguments to the `optimize` function.
-
----
-
-## A Note on the Example Code
-
-The code snippets in this README are simplified for clarity. For a complete, runnable example, please refer to the Jupyter Notebook in `examples/mmm_example/simple.ipynb` and `examples/mmm_example/complex.ipynb` for a more advanced example.
-
----
+This project is licensed under the MIT License. See the `LICENSE` file for details.
