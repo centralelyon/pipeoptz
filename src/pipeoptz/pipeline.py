@@ -3,6 +3,8 @@ import importlib
 import os, sys, time
 from collections import deque
 from .node import Node, NodeIf, NodeFor, NodeWhile
+from typing import Callable, Any, Union, Dict
+
 
 def _product(*iterables, random=False, max_combinations=0, optimize_memory=False):
     """
@@ -44,6 +46,7 @@ def _product(*iterables, random=False, max_combinations=0, optimize_memory=False
     prod = it_product(*iterables)
     for i in range(min(max_combinations, prod_len_index)):
         yield next(prod)
+
 
 class Pipeline:
     """
@@ -507,7 +510,7 @@ class Pipeline:
         return getattr(module, function_name)
 
     @classmethod
-    def from_json(cls, filepath, function_resolver=None):
+    def from_json(cls, filepath: str, function_resolver: Callable[[str], Any] | None = None) -> 'Pipeline':
         """
         Creates a Pipeline instance from a JSON definition file.
 

@@ -3,6 +3,7 @@
 import pytest
 import numpy as np
 from unittest.mock import patch
+import warnings
 
 import sys, os
 sys.path.append(os.path.abspath("../src/"))
@@ -161,7 +162,12 @@ class TestOptimizerMethods:
                 p for p in optimizer_instance.params_to_optimize if not isinstance(p, MultiChoiceParameter)
             ]
 
-        best_params, loss_log = optimizer_instance.optimize(X, y, method=method, **kwargs)
+        warnings.filterwarnings("error")
+        try:
+            best_params, loss_log = optimizer_instance.optimize(X, y, method=method, **kwargs)
+        except Warning:
+            pass
+        warnings.resetwarnings()
 
         assert isinstance(best_params, dict)
         assert isinstance(loss_log, list)
