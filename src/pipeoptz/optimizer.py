@@ -53,10 +53,6 @@ class PipelineOptimizer:
         """Adds a parameter to the list of parameters that the optimizer will tune."""
         self.params_to_optimize.append(param)
 
-    def nb_params_possibilities(self):
-        """Returns the total number of possible combinations of parameter values."""
-        return np.prod([p.get_parametric_space()["range_size"] for p in self.params_to_optimize])
-
     def set_params(self, values:dict):
         """
         Sets the values of the parameters to optimize.

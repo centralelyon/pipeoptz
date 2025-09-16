@@ -21,13 +21,6 @@ class Parameter:
         self.node_id = node_id
         self.param_name = param_name
         self.value = None
-    
-    def get_parametric_space(self):
-        """
-        Returns the parametric space of the parameter.
-        This should be overridden in subclasses.
-        """
-        raise NotImplementedError("This method must be implemented in subclasses.")        
 
     def set_value(self, value):
         """
@@ -108,7 +101,7 @@ class IntParameter(Parameter):
         if not isinstance(value, (int, np.integer)):
             raise ValueError(f"Value must be an integer, but 'value' is of type {type(value)}.")
         elif value < self.min_value or value > self.max_value:
-            raise ValueError("Value must be between {self.min_value} and {self.max_value}.")
+            raise ValueError(f"Value must be between {self.min_value} and {self.max_value}.")
         elif (value-self.min_value) % self.step:
             raise ValueError(f"Value must be in range({self.min_value}, {self.max_value+1}, {self.step}).")
         self.value = value
