@@ -26,6 +26,20 @@ dependencies = [
 Homepage = "https://github.com/centralelyon/pipeoptz"
 Issues   = "https://github.com/centralelyon/pipeoptz/issues"
 
+[project.optional-dependencies]
+examples = [
+    "matplotlib",
+    "opencv-python",
+    "Pillow",
+    "ipywidgets",
+    "jupyter"
+]
+dev = [
+    "pytest",
+    "ruff",
+    "pytest-cov"
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 exclude = ["tests*"]

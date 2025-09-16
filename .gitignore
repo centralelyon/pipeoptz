@@ -21,3 +21,5 @@ venv/
 *.DS_Store
 
 src/pipeoptz.egg-info
+
+site/
