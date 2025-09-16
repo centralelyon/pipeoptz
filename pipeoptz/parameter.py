@@ -109,7 +109,7 @@ class IntParameter(Parameter):
             raise ValueError(f"Value must be an integer, but 'value' is of type {type(value)}.")
         elif value < self.min_value or value > self.max_value:
             raise ValueError("Value must be between {self.min_value} and {self.max_value}.")
-        elif value-self.min_value % self.step:
+        elif (value-self.min_value) % self.step:
             raise ValueError(f"Value must be in range({self.min_value}, {self.max_value+1}, {self.step}).")
         self.value = value
 
@@ -193,7 +193,7 @@ class FloatParameter(Parameter):
             raise ValueError(f"The value must be a float, but 'value' is of type {type(value)}.")
         elif value < self.min_value or value > self.max_value:
             raise ValueError(f"Value must be between {self.min_value} and {self.max_value}.")
-        elif self.step and value-self.min_value % self.step:
+        elif self.step and (value-self.min_value) % self.step > self.step/10:
             raise ValueError(f"Value must be in range({self.min_value}, {self.max_value} included, {self.step}).")
         self.value = float(value)
     
@@ -213,7 +213,7 @@ class FloatParameter(Parameter):
             float: A random float.
         """
         r = rd.uniform(self.min_value, self.max_value)
-        r = r - r%self.step if self.step else r
+        r -= - (r%self.step) if self.step else 0
         if set_value:
             self.set_value(r)
         return r
