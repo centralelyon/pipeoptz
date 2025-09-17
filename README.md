@@ -89,7 +89,7 @@ History of all node outputs: {'A': 8, 'B': 80, 'C': 81}
 And it will generate an image (`pipeline_example.png`) of your pipeline's structure:
 
 <div align="center">
-  <img src="examples/basic/pipeline_example.png" alt="Simple Pipeline Graph"/>
+  <img src="examples/basic/pipeline_example.png" alt="Simple Pipeline Graph" width="150"/>
 </div>
 
 ## Optimizing a Pipeline
