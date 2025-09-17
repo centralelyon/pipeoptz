@@ -1,8 +1,8 @@
-# Référence API
+# API Reference
 
-Bienvenue dans la référence API de PipeOptz. Vous trouverez ici la documentation générée automatiquement pour les modules, classes et fonctions de la bibliothèque.
+Welcome to the PipeOptz API reference. Here you will find the automatically generated documentation for the modules, classes, and functions of the library.
 
-## Module `pipeoptz`
+## `pipeoptz` Module
 
 ::: pipeoptz
     options:
@@ -10,4 +10,3 @@ Bienvenue dans la référence API de PipeOptz. Vous trouverez ici la documentati
       show_submodules: true
       extra:
         show_members: true
-
