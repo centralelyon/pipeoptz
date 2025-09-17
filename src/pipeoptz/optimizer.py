@@ -1,3 +1,4 @@
+from __future__ import annotations
 from sklearn.preprocessing import StandardScaler
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel, ConstantKernel as C
@@ -7,6 +8,8 @@ from .parameter import IntParameter, FloatParameter, ChoiceParameter, BoolParame
 from .pipeline import Pipeline, _product
 from sklearn.exceptions import ConvergenceWarning
 import warnings
+from typing import Any, Callable, Dict, Optional, Union, List, Tuple
+
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 from scipy.stats import norm
 
@@ -24,7 +27,7 @@ class PipelineOptimizer:
         pipeline (Pipeline): The pipeline instance to be optimized.
         params_to_optimize (list): A list of Parameter objects to be tuned.
     """
-    def __init__(self, pipeline, loss_function, max_time_pipeline=0):
+    def __init__(self, pipeline: Pipeline, loss_function: Callable[..., float], max_time_pipeline: float = 0) -> None:
         """
         Initializes a PipelineOptimizer.
 
@@ -43,17 +46,17 @@ class PipelineOptimizer:
         assert isinstance(max_time_pipeline, (int, float)), "max_time_pipeline must be a number"
         assert max_time_pipeline >= 0, "max_time_pipeline must be a positive number"
 
-        self.pipeline = pipeline
-        self.params_to_optimize = []
-        self.max_time_pipeline = max_time_pipeline
-        self.loss = loss_function
-        self.best_params_history = []
+        self.pipeline: Pipeline = pipeline
+        self.params_to_optimize: List[Parameter] = []
+        self.max_time_pipeline: float = max_time_pipeline
+        self.loss: Callable[..., float] = loss_function
+        self.best_params_history: List[Dict[str, Any]] = []
 
-    def add_param(self, param):
+    def add_param(self, param: Parameter) -> None:
         """Adds a parameter to the list of parameters that the optimizer will tune."""
         self.params_to_optimize.append(param)
 
-    def set_params(self, values:dict):
+    def set_params(self, values: Dict[str, Any]) -> None:
         """
         Sets the values of the parameters to optimize.
 
@@ -72,7 +75,7 @@ class PipelineOptimizer:
             if not found:
                 raise ValueError(f"Parameter {param_str} not found in the parameters to optimize.")
 
-    def set_param(self, node_id, param_name, value):
+    def set_param(self, node_id: str, param_name: str, value: Any) -> None:
         """
         Sets the value of a specific parameter in the pipeline.
 
@@ -87,14 +90,14 @@ class PipelineOptimizer:
                 return
         raise ValueError(f"Parameter {node_id}.{param_name} not found in the parameters to optimize.")
 
-    def update_pipeline_params(self):
+    def update_pipeline_params(self) -> None:
         """Updates the pipeline with the current parameter values."""
         params = {}
         for param in self.params_to_optimize:
             params[f"{param.node_id}.{param.param_name}"] = param.get_value()
         self.pipeline.set_fixed_params(params)
 
-    def get_params_value(self):
+    def get_params_value(self) -> Dict[str, Any]:
         """
         Returns the current values of the parameters to optimize.
 
@@ -107,7 +110,7 @@ class PipelineOptimizer:
             values[f"{param.node_id}.{param.param_name}"] = param.get_value()
         return values
 
-    def evaluate(self, X, y, y_negative=None):
+    def evaluate(self, X: List[Dict[str, Any]], y: List[Any], y_negative: Optional[List[Any]] = None) -> Tuple[List[Any], float]:
         """
         Evaluates the pipeline on the provided dataset and computes the average loss.
         Args:
@@ -135,7 +138,7 @@ class PipelineOptimizer:
         loss /= i+1
         return results, loss
 
-    def plot_convergence(self):
+    def plot_convergence(self) -> np.ndarray:
         """
         Generates an image (numpy array) visualizing the convergence of parameters over iterations.
         Each row represents a parameter, and each column represents an iteration.
@@ -149,7 +152,7 @@ class PipelineOptimizer:
             print("No optimization history to plot. Run an optimizer first.")
             return
 
-        param_order = [f"{p.node_id}.{p.param_name}" for p in self.params_to_optimize]
+        param_order = [f"{p.node_id}.{p.param_name}" for p in self.params_to_optimize] 
         
         history_matrix = []
         for params_dict in self.best_params_history:
@@ -195,7 +198,7 @@ class PipelineOptimizer:
             normalized_history[:, i] = final_normalized
         return normalized_history.T
 
-    def optimize_ACO(self, X, y, y_negative=None, iterations=100, ants=20, alpha=1.0, beta=1.0, evaporation_rate=0.3, param_sampling=20, verbose=False):
+    def optimize_ACO(self, X: List[Dict[str, Any]], y: List[Any], y_negative: Optional[List[Any]] = None, iterations: int = 100, ants: int = 20, alpha: float = 1.0, beta: float = 1.0, evaporation_rate: float = 0.3, param_sampling: int = 20, verbose: bool = False) -> Tuple[Dict[str, Any], List[float]]:
         """
         Ant Colony Optimization (ACO) with real use of beta for heuristic guidance.
 
@@ -291,7 +294,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_params, loss_log
 
-    def optimize_SA(self, X, y, y_negative=None, iterations=100, initial_temp=1.0, cooling_rate=0.95, verbose=False):
+    def optimize_SA(self, X: List[Dict[str, Any]], y: List[Any], y_negative: Optional[List[Any]] = None, iterations: int = 100, initial_temp: float = 1.0, cooling_rate: float = 0.95, verbose: bool = False) -> Tuple[Dict[str, Any], List[float]]:
         """
         Optimizes the pipeline using Simulated Annealing (SA).
 
@@ -345,7 +348,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_params, loss_log
 
-    def optimize_PSO(self, X, y, y_negative=None, iterations=100, swarm_size=20, inertia=0.5, cognitive=1.5, social=1.5, verbose=False):
+    def optimize_PSO(self, X: List[Dict[str, Any]], y: List[Any], y_negative: Optional[List[Any]] = None, iterations: int = 100, swarm_size: int = 20, inertia: float = 0.5, cognitive: float = 1.5, social: float = 1.5, verbose: bool = False) -> Tuple[Dict[str, Any], List[float]]:
         """
         Optimizes the pipeline using Particle Swarm Optimization (PSO).
 
@@ -423,7 +426,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_particle, loss_log
 
-    def optimize_GA(self, X, y, y_negative=None, generations=50, population_size=20, mutation_rate=0.1, crossover_rate=0.7, verbose=False):
+    def optimize_GA(self, X: List[Dict[str, Any]], y: List[Any], y_negative: Optional[List[Any]] = None, generations: int = 50, population_size: int = 20, mutation_rate: float = 0.1, crossover_rate: float = 0.7, verbose: bool = False) -> Tuple[Dict[str, Any], List[float]]:
         """
         Optimizes the pipeline using Genetic Algorithm (GA).
 
@@ -499,7 +502,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_individual, loss_log
     
-    def optimize_GS(self, X, y, y_negative=None, max_combinations=100, param_sampling=None, verbose=False):
+    def optimize_GS(self, X: List[Dict[str, Any]], y: List[Any], y_negative: Optional[List[Any]] = None, max_combinations: int = 100, param_sampling: Optional[int] = None, verbose: bool = False) -> Tuple[Dict[str, Any], List[float]]:
         """
         Exhaustively searches all possible parameter combinations (within a limited budget).
 
@@ -557,7 +560,7 @@ class PipelineOptimizer:
         return best_params, loss_log
    
     @staticmethod
-    def _encode(params, param_defs):
+    def _encode(params: Dict[str, Any], param_defs: List[Tuple[str, Parameter]]) -> np.ndarray:
         """ 
         Encodes a dictionary of parameters into a numpy array.
         This is used for optimization algorithms that require numerical input like optimize_BO.
@@ -582,7 +585,7 @@ class PipelineOptimizer:
         return np.array(encoded)
     
     @staticmethod
-    def _decode(x, param_defs):
+    def _decode(x: np.ndarray, param_defs: List[Tuple[str, Parameter]]) -> Dict[str, Any]:
         """
         Decodes a numpy array into a dictionary of parameters.
         This is used for optimization algorithms that require numerical input like optimize_BO.
@@ -607,7 +610,7 @@ class PipelineOptimizer:
                 params[name] = float(np.clip(x[i], p.min_value, p.max_value))
         return params
 
-    def optimize_BO(self, X_init, y_init, y_init_negative=None, iterations=50, init_points=5, noise_level=0, n_candidates=None, verbose=False):
+    def optimize_BO(self, X_init: List[Dict[str, Any]], y_init: List[Any], y_init_negative: Optional[List[Any]] = None, iterations: int = 50, init_points: int = 5, noise_level: float = 0, n_candidates: Optional[int] = None, verbose: bool = False) -> Tuple[Dict[str, Any], List[float]]:
         """
         Bayesian Optimization using Gaussian Process and Expected Improvement (EI),
         with input normalization and robust handling.
@@ -699,7 +702,7 @@ class PipelineOptimizer:
         self.update_pipeline_params()
         return best_params, loss_log
         
-    def optimize(self, X, y, y_negative=None, method="BO", verbose=False, **kwargs):
+    def optimize(self, X: List[Dict[str, Any]], y: List[Any], y_negative: Optional[List[Any]] = None, method: str = "BO", verbose: bool = False, **kwargs: Any) -> Tuple[Dict[str, Any], List[float]]:
         """
         Optimizes the pipeline using the specified method.
 

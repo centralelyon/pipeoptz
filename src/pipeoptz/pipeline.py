@@ -1,12 +1,13 @@
+from __future__ import annotations
 import json
 import importlib
 import os, sys, time
 from collections import deque
 from .node import Node, NodeIf, NodeFor, NodeWhile
-from typing import Callable, Any, Union, Dict
+from typing import Callable, Any, Union, Dict, List, Tuple, Set, Deque, Iterator, Optional, Iterable
 
 
-def _product(*iterables, random=False, max_combinations=0, optimize_memory=False):
+def _product(*iterables: Iterable[Any], random: bool = False, max_combinations: int = 0, optimize_memory: bool = False) -> Iterator[Tuple[Any, ...]]:
     """
     Returns the cartesian product of input iterables, with an option for random sampling.
 
@@ -67,14 +68,14 @@ class Pipeline:
         timer (dict): Stores the execution time for each node after a run.
     """
 
-    def __init__(self, name, description=""):
-        self.name = name
-        self.description = description
-        self.nodes = {}  # id_noeud -> Node
-        self.node_dependencies = {} # id_noeud -> {input_name: source_node_id}
-        self.timer = {}
+    def __init__(self, name: str, description: str = "") -> None:
+        self.name: str = name
+        self.description: str = description
+        self.nodes: Dict[str, Union[Node, Pipeline]] = {}
+        self.node_dependencies: Dict[str, Dict[str, str]] = {}
+        self.timer: Dict[str, float] = {}
 
-    def add_node(self, node, predecessors={}):
+    def add_node(self, node: Union[Node, Pipeline], predecessors: Dict[str, str] = {}) -> None:
         """
         Adds a node or a sub-pipeline to the pipeline.
 
@@ -107,17 +108,17 @@ class Pipeline:
             self.nodes["["+node.name+"]"] = node
             self.node_dependencies["["+node.name+"]"] = predecessors
 
-    def get_node(self, node_id):
+    def get_node(self, node_id: str) -> Union[Node, Pipeline]:
         """Gets a node by its ID."""
         if node_id not in self.nodes:
             raise ValueError("The node does not exist in the pipeline.")
         return self.nodes[node_id]
     
-    def get_nodes(self):
+    def get_nodes(self) -> Dict[str, Union[Node, Pipeline]]:
         """Gets all nodes in the pipeline."""
         return self.nodes
 
-    def set_fixed_params(self, params):
+    def set_fixed_params(self, params: Dict[str, Any]) -> None:
         """Sets fixed parameters for multiple nodes in the pipeline."""
         for id, value in params.items():
             node_id, param = id.split('.', 1)
@@ -125,7 +126,7 @@ class Pipeline:
                 raise ValueError(f"The node with id '{node_id}' does not exist in the pipeline.")
             self.nodes[node_id].set_fixed_param(param, value)
     
-    def get_fixed_params(self):
+    def get_fixed_params(self) -> Dict[str, Any]:
         """Gets the fixed parameters from all nodes in the pipeline."""
         params = {}
         for node_id, node in self.nodes.items():
@@ -133,12 +134,12 @@ class Pipeline:
                 params[f"{node_id}.{param}"] = value
         return params
     
-    def _get_graph_representation(self):
+    def _get_graph_representation(self) -> Tuple[Dict[str, int], Dict[str, List[str]]]:
         """
         Build a graph representation with in-degrees and successor lists.
         """
-        in_degree = {node_id: 0 for node_id in self.nodes}
-        successors = {node_id: [] for node_id in self.nodes}
+        in_degree: Dict[str, int] = {node_id: 0 for node_id in self.nodes}
+        successors: Dict[str, List[str]] = {node_id: [] for node_id in self.nodes}
 
         for node_id, deps in self.node_dependencies.items():
             for _, source_node_id in deps.items():
@@ -155,7 +156,7 @@ class Pipeline:
                     in_degree[node_id] += 1
         return in_degree, successors
 
-    def static_order(self):
+    def static_order(self) -> List[str]:
         """
         Calculates the topological order of nodes for execution.
 
@@ -169,8 +170,8 @@ class Pipeline:
             ValueError: If a cycle is detected in the graph.
         """
         in_degree, successors = self._get_graph_representation()
-        queue = deque([node_id for node_id, degree in in_degree.items() if degree == 0])
-        topological_order = []
+        queue: Deque[str] = deque([node_id for node_id, degree in in_degree.items() if degree == 0])
+        topological_order: List[str] = []
 
         while queue:
             u = queue.popleft()
@@ -184,7 +185,7 @@ class Pipeline:
             raise ValueError("The graph contains a cycle, topological sort is impossible.")
         return topological_order
 
-    def run(self, run_params={}, optimize_memory=False, skip_failed_loop=False, debug=False):
+    def run(self, run_params: Dict[str, Any] = {}, optimize_memory: bool = False, skip_failed_loop: bool = False, debug: bool = False) -> Tuple[str, Dict[str, Any], Tuple[float, Dict[str, float]]]:
         """
         Executes the entire pipeline from start to finish.
 
@@ -206,7 +207,7 @@ class Pipeline:
                 - tuple: A tuple with the total execution time and a dictionary
                          of individual node execution times.
         """
-        node_outputs = {}
+        node_outputs: Dict[str, Any] = {}
         self.timer = {}
         try:
             ordered_nodes = self.static_order()
@@ -222,10 +223,10 @@ class Pipeline:
             if isinstance(self.nodes[node_id], (NodeIf, NodeFor, NodeWhile)):
                 self.nodes[node_id].set_run_params(skip_failed_loop, debug)
             node = self.nodes[node_id]
-            inputs = {}
-            loop_inputs = {}
-            multiple_inputs = {}
-            len_loop = float("inf")
+            inputs: Dict[str, Any] = {}
+            loop_inputs: Dict[str, Any] = {}
+            multiple_inputs: Dict[str, Any] = {}
+            len_loop: Union[int, float] = float("inf")
             # node_dependencies contains the predecessors of node_id
             for input_param_name, source_node_id in self.node_dependencies.get(node_id, {}).items():
                 if source_node_id.startswith("run_params:"):
@@ -249,7 +250,7 @@ class Pipeline:
                 for i in range(len_loop):
                     try:
                         print(f"Executing node: {node_id} iteration {i+1}/{len_loop}", end="\r") if debug else None
-                        node_outputs[node_id].append(node.execute({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}) if node_id[0]+node_id[-1] != "[]" \
+                        node_outputs[node_id].append(node.execute({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}) if node_id[0]+node_id[-1] != "[]" 
                                         else node.run({**inputs, **{k: v[i] for k, v in loop_inputs.items()}}, optimize_memory, skip_failed_loop, debug))
                     except Exception as e:
                         if skip_failed_loop:
@@ -262,7 +263,7 @@ class Pipeline:
                 for p in _product(*multiple_inputs.values()):
                     try:
                         print(f"Executing node: {node_id} with parameters {dict(zip(multiple_inputs.keys(), p))}", end="\r") if debug else None
-                        node_outputs[node_id].append(node.execute({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}) if node_id[0]+node_id[-1] != "[]" \
+                        node_outputs[node_id].append(node.execute({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}) if node_id[0]+node_id[-1] != "[]" 
                                         else node.run({**inputs, **{k: v for k, v in zip(multiple_inputs.keys(), p)}}, optimize_memory, skip_failed_loop, debug))
                     except Exception as e:
                         if skip_failed_loop:
@@ -295,7 +296,7 @@ class Pipeline:
                 self.nodes[node_id].clear_memory()
         return last_node_id, node_outputs, (sum(self.timer.values()), self.timer)
 
-    def to_dot(self, filepath=None, add_optz=False, show_function=True, _prefix=""):
+    def to_dot(self, filepath: Optional[str] = None, add_optz: bool = False, show_function: bool = True, _prefix: str = "") -> str:
         """
         Generates a DOT language representation of the pipeline graph.
 
@@ -307,9 +308,10 @@ class Pipeline:
         Returns:
             the DOT string of the pipeline
         """
-        def escape_id(nid): return f"{_prefix}{nid}"
+        def escape_id(nid: str) -> str:
+            return f"{_prefix}{nid}"
 
-        dot_lines = []
+        dot_lines: List[str] = []
         dot_lines.append("digraph Pipeline {" if _prefix == "" else "subgraph Pipeline {")
         dot_lines.append('  rankdir=TB;')  # vertical layout
         dot_lines.append('  node [fontsize=12 fontname="Helvetica"];')
@@ -393,7 +395,7 @@ class Pipeline:
                     if _prefix != "":
                         continue
                     input_label = input_name.split(":")[-1]
-                    dot_lines.append(f'  {{ rank=source; \"params_{input_label}\"; }}')
+                    dot_lines.append(f'  {{ rank=source; "params_{input_label}"; }}')
                     dot_lines.append(f'  "params_{input_label}" [shape=ellipse, style=dashed, label=< <FONT POINT-SIZE="10">{input_label}</FONT> >];')
                     dot_lines.append(f'  "params_{input_label}" -> "{to_label}" [label="{input_label}", fontsize=10, style=dashed];')
                 elif isinstance(self.nodes[from_id], (NodeIf, NodeFor, NodeWhile)):
@@ -410,7 +412,7 @@ class Pipeline:
                 f.write(dot_str)
         return "\n".join(dot_lines)
 
-    def to_image(self, filepath=None, dpi=160, add_optz=False, show_function=True):
+    def to_image(self, filepath: Optional[str] = None, dpi: int = 160, add_optz: bool = False, show_function: bool = True) -> None:
         self.to_dot(os.path.splitext(filepath)[0] + ".dot", add_optz=add_optz, show_function=show_function)
         try:
             res = os.system(f'dot -Tpng -Gdpi={dpi} "{os.path.splitext(filepath)[0] + ".dot"}" -o "{filepath}"')
@@ -420,7 +422,7 @@ class Pipeline:
            print("Error during PNG generation")
         os.remove(os.path.splitext(filepath)[0] + ".dot")
 
-    def to_json(self, filepath):
+    def to_json(self, filepath: str) -> None:
         """
         Serializes the pipeline's structure to a JSON file.
 
@@ -430,7 +432,7 @@ class Pipeline:
         Args:
             filepath (str): The path to save the JSON file.
         """
-        def serialize_node(node):
+        def serialize_node(node: Union[Node, Pipeline]) -> Dict[str, Any]:
             if isinstance(node, NodeIf):
                 return {
                     "id": node.id,
@@ -470,7 +472,7 @@ class Pipeline:
                     "fixed_params": node.fixed_params
                 }
 
-        def serialize_pipeline(pipe):
+        def serialize_pipeline(pipe: Pipeline) -> Dict[str, Any]:
             return {
                 "name": pipe.name,
                 "description": pipe.description,
@@ -488,7 +490,7 @@ class Pipeline:
             json.dump(pipeline_json, f, indent=4)
 
     @staticmethod
-    def _default_function_resolver(type_str):
+    def _default_function_resolver(type_str: str) -> Callable[..., Any]:
         """
         Default function resolver for `from_json`.
         Resolves a function from a string like 'module.function'.
@@ -510,7 +512,7 @@ class Pipeline:
         return getattr(module, function_name)
 
     @classmethod
-    def from_json(cls, filepath: str, function_resolver: Callable[[str], Any] | None = None) -> 'Pipeline':
+    def from_json(cls, filepath: str, function_resolver: Optional[Callable[[str], Any]] = None) -> Pipeline:
         """
         Creates a Pipeline instance from a JSON definition file.
 
@@ -532,7 +534,7 @@ class Pipeline:
         with open(filepath, 'r', encoding='utf-8') as f:
             pipeline_def = json.load(f)
 
-        def build_pipeline(pipeline_data):
+        def build_pipeline(pipeline_data: Dict[str, Any]) -> Pipeline:
             pipeline_instance = cls(name=pipeline_data["name"], description=pipeline_data["description"])
             nodes_data = pipeline_data["nodes"]
             edges_data = pipeline_data["edges"]
@@ -584,12 +586,12 @@ class Pipeline:
 
         return build_pipeline(pipeline_def)
 
-    def run_single_node(self, node_id, inputs={}, change_memory=False):
+    def run_single_node(self, node_id: str, inputs: Dict[str, Any] = {}, change_memory: bool = False) -> Any:
         inputs = {**inputs, 
                   **{input_param: self.nodes[source_node_id].output 
                         for input_param, source_node_id in self.node_dependencies[node_id].items()}}
         return self.nodes[node_id].execute(inputs, memory=change_memory)
 
-    def clear_memory(self):
+    def clear_memory(self) -> None:
         for node in self.nodes.values():
             node.clear_memory()
