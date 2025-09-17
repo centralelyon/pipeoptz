@@ -1,0 +1,31 @@
+digraph Pipeline {
+  rankdir=TB;
+  node [fontsize=12 fontname="Helvetica"];
+    "Start" [shape=box, label=< <B>Start</B> <BR/><FONT POINT-SIZE="10">f1</FONT> >];
+    "ConditionInput" [shape=box, label=< <B>ConditionInput</B> <BR/><FONT POINT-SIZE="10">f2</FONT> >];
+  subgraph cluster_IF1 {
+    style=dashed;
+    "IF1" [shape=diamond, label=< <B>IF1</B> <BR/><FONT POINT-SIZE="10">condition_func</FONT> >];
+subgraph Pipeline {
+  rankdir=TB;
+  node [fontsize=12 fontname="Helvetica"];
+    "IF1_T_T1" [shape=box, label=< <B>T1</B> <BR/><FONT POINT-SIZE="10">processing_true</FONT> >];
+    "IF1_T_T2" [shape=box, label=< <B>T2</B> <BR/><FONT POINT-SIZE="10">processing_true</FONT> >];
+  "IF1_T_T1" -> "IF1_T_T2" [label="data", fontsize=9];
+}
+subgraph Pipeline {
+  rankdir=TB;
+  node [fontsize=12 fontname="Helvetica"];
+    "IF1_F_F1" [shape=box, label=< <B>F1</B> <BR/><FONT POINT-SIZE="10">processing_false</FONT> >];
+}
+    "IF1" -> "IF1_T_T1" [label="True", tailport=s];
+    "IF1" -> "IF1_F_F1" [label="False", tailport=s];
+    "IF1_output" [shape=diamond, label=< <FONT POINT-SIZE="10"> If Output</FONT> >];
+    "IF1_T_T2" -> "IF1_output" [tailport=s];
+    "IF1_F_F1" -> "IF1_output" [tailport=s];
+  }
+    "End" [shape=doubleoctagon, label=< <B>End</B> <BR/><FONT POINT-SIZE="10">integer</FONT> >];
+  "ConditionInput" -> "IF1" [label="value", fontsize=9, headport=w];
+  "Start" -> "IF1" [label="data", fontsize=9];
+  "IF1_output" -> "End" [label="x", fontsize=9];
+}

@@ -630,7 +630,7 @@ class PipelineOptimizer:
             loss_log (list): Best loss per iteration.
         """
         self.best_params_history = []
-        MAXFLOAT = 1e100
+        MAXFLOAT = np.float64(1e100)
 
         # Filter out MultiChoiceParameter for simplicity in this implementation
         # MultiChoiceParameter is not directly supported by the current encoding/decoding for BO
@@ -649,7 +649,7 @@ class PipelineOptimizer:
             X_raw.append(self._encode(sample, param_defs))
             Y.append(min(MAXFLOAT, loss))
 
-        X_raw, Y = np.array(X_raw), np.array(Y)
+        X_raw, Y = np.array(X_raw), np.array(Y, dtype=np.float64)
         scaler = StandardScaler()
         X = scaler.fit_transform(X_raw)
 

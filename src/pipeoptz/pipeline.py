@@ -414,15 +414,19 @@ class Pipeline:
                 f.write(dot_str)
         return "\n".join(dot_lines)
 
-    def to_image(self, filepath: Optional[str] = None, dpi: int = 160, add_optz: bool = False, show_function: bool = True) -> None:
-        self.to_dot(os.path.splitext(filepath)[0] + ".dot", add_optz=add_optz, show_function=show_function)
+    def to_image(self, filepath: str, dpi: int = 160, add_optz: bool = False, show_function: bool = True) -> None:
+        delete = False
+        if filepath is None or not os.path.exists(filepath):
+            self.to_dot(os.path.splitext(filepath)[0] + ".dot", add_optz=add_optz, show_function=show_function)
+            delete = True
         try:
             res = os.system(f'dot -Tpng -Gdpi={dpi} "{os.path.splitext(filepath)[0] + ".dot"}" -o "{filepath}"')
         except Exception as e:
             raise Exception("Error during PNG generation.\n Do you have graphviz installed ?", e)
         if res:
            print("Error during PNG generation")
-        os.remove(os.path.splitext(filepath)[0] + ".dot")
+        if delete:
+            os.remove(os.path.splitext(filepath)[0] + ".dot")
 
     def to_json(self, filepath: str) -> None:
         """

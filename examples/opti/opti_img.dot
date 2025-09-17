@@ -1,0 +1,10 @@
+digraph Pipeline {
+  rankdir=TB;
+  node [fontsize=12 fontname="Helvetica"];
+    "blur" [shape=box, label=< <B>blur</B> <BR/><FONT POINT-SIZE="10">gaussian_blur</FONT> <BR/><FONT POINT-SIZE="8"><I>(k, sigma)</I></FONT> >];
+    "threshold" [shape=doubleoctagon, label=< <B>threshold</B> <BR/><FONT POINT-SIZE="10">threshold</FONT> <BR/><FONT POINT-SIZE="8"><I>(threshold_value)</I></FONT> >];
+  { rank=source; "params_image"; }
+  "params_image" [shape=ellipse, style=dashed, label=< <FONT POINT-SIZE="10">image</FONT> >];
+  "params_image" -> "blur" [label="image", fontsize=10, style=dashed];
+  "blur" -> "threshold" [label="image", fontsize=9];
+}
