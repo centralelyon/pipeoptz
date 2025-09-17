@@ -1,14 +1,14 @@
 digraph Pipeline {
   rankdir=TB;
   node [fontsize=12 fontname="Helvetica"];
-  "A" [shape=box, label=< <B>A</B><BR/><FONT POINT-SIZE="10">add</FONT> >];
+    "A" [shape=box, label=< <B>A</B> <BR/><FONT POINT-SIZE="10">add</FONT> >];
   subgraph cluster_While_Test {
     style=dashed;
     "While_Test" [shape=Mdiamond, label=< <B>While Test</B><BR/><FONT POINT-SIZE="10">While Loop</FONT> >];
 subgraph Pipeline {
   rankdir=TB;
   node [fontsize=12 fontname="Helvetica"];
-  "While_Test_L_B" [shape=box, label=< <B>B</B><BR/><FONT POINT-SIZE="10">add</FONT> <BR/><FONT POINT-SIZE="8"><I>(x)</I></FONT> >];
+    "While_Test_L_B" [shape=box, label=< <B>B</B> <BR/><FONT POINT-SIZE="10">add</FONT> <BR/><FONT POINT-SIZE="8"><I>(x)</I></FONT> >];
 }
     "While_Test" -> "While_Test_L_B" [label="start", tailport=s];
     "While_Test_L_B" -> "While_Test" [label="next"];
