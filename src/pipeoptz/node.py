@@ -1,5 +1,4 @@
 from __future__ import annotations
-import numpy as np
 from typing import Any, Callable, Dict, Optional, Union, List, TYPE_CHECKING
 if TYPE_CHECKING:
     from .pipeline import Pipeline
