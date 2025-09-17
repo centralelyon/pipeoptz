@@ -27,4 +27,4 @@ jobs:
     - name: Run Ruff Linter
       run: ruff check .
     - name: Run tests with coverage
-      run: pytest --cov=src/pipeoptz
+      run: python -m pytest --cov=src/pipeoptz
