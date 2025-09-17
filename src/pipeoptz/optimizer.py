@@ -4,7 +4,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel, ConstantKernel as C
 import numpy as np
 import random as rd
-from .parameter import IntParameter, FloatParameter, ChoiceParameter, BoolParameter, MultiChoiceParameter
+from .parameter import IntParameter, FloatParameter, ChoiceParameter, BoolParameter, MultiChoiceParameter, Parameter
 from .pipeline import Pipeline, _product
 from sklearn.exceptions import ConvergenceWarning
 import warnings
