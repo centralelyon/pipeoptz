@@ -2,7 +2,8 @@ import pytest
 import numpy as np
 from unittest.mock import Mock
 
-import sys, os
+import sys
+import os
 sys.path.append(os.path.abspath("../src/"))
 from pipeoptz.node import Node, NodeIf, NodeFor, NodeWhile
 from pipeoptz.pipeline import Pipeline
@@ -191,7 +192,8 @@ class TestNodeIf:
         """
         Tests if a NodeIf is initialized correctly.
         """
-        cond_func = lambda x: x > 0
+        def cond_func(x):
+            return x > 0
         node_if = NodeIf(
             id="if_node",
             condition_func=cond_func,
@@ -209,7 +211,8 @@ class TestNodeIf:
         """
         Tests that the 'true' pipeline is executed if the condition is true.
         """
-        cond_func = lambda val: val > 10
+        def cond_func(val):
+            return val > 10
         node_if = NodeIf(
             id="if_node",
             condition_func=cond_func,
@@ -226,7 +229,8 @@ class TestNodeIf:
         """
         Tests that the 'false' pipeline is executed if the condition is false.
         """
-        cond_func = lambda val: val > 10
+        def cond_func(val):
+            return val > 10
         node_if = NodeIf(
             id="if_node",
             condition_func=cond_func,
@@ -342,7 +346,8 @@ class TestNodeWhile:
         """
         Tests if a NodeWhile is initialized correctly.
         """
-        cond_func = lambda loop_var: loop_var < 5
+        def cond_func(loop_var):
+            return loop_var < 5
         node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
         assert node_while.id == "while_node"
         assert node_while.func == cond_func
@@ -352,7 +357,8 @@ class TestNodeWhile:
         """
         Tests NodeWhile execution until the condition is false.
         """
-        cond_func = lambda loop_var: loop_var < 5
+        def cond_func(loop_var):
+            return loop_var < 5
         node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
         result = node_while.execute(inputs={'loop_var': 0})
         assert result == 5
@@ -361,7 +367,8 @@ class TestNodeWhile:
         """
         Tests NodeWhile execution with a max_iterations limit.
         """
-        cond_func = lambda loop_var: True  # Condition is always true
+        def cond_func(loop_var):
+            return True  # Condition is always true
         node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline, fixed_params={'max_iterations': 3})
         result = node_while.execute(inputs={'loop_var': 0})
         assert result == 3
@@ -370,7 +377,8 @@ class TestNodeWhile:
         """
         Tests that NodeWhile raises an error if 'loop_var' is missing.
         """
-        cond_func = lambda loop_var: loop_var < 5
+        def cond_func(loop_var):
+            return loop_var < 5
         node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
         with pytest.raises(ValueError, match="NodeWhile requires a 'loop_var' input"):
             node_while.execute(inputs={})

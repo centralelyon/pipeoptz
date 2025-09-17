@@ -5,7 +5,8 @@ import numpy as np
 from unittest.mock import patch
 import warnings
 
-import sys, os
+import sys
+import os
 sys.path.append(os.path.abspath("../src/"))
 from pipeoptz.optimizer import PipelineOptimizer
 from pipeoptz.pipeline import Pipeline

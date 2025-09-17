@@ -1,8 +1,7 @@
 import pytest
-import numpy as np
-from math import comb
 
-import sys, os
+import sys
+import os
 sys.path.append(os.path.abspath("../src/"))
 from pipeoptz.parameter import (
     Parameter,

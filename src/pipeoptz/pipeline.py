@@ -1,10 +1,12 @@
 from __future__ import annotations
 import json
 import importlib
-import os, sys, time
+import os
+import sys
+import time
 from collections import deque
 from .node import Node, NodeIf, NodeFor, NodeWhile
-from typing import Callable, Any, Union, Dict, List, Tuple, Set, Deque, Iterator, Optional, Iterable
+from typing import Callable, Any, Union, Dict, List, Tuple, Deque, Iterator, Optional, Iterable
 
 
 def _product(*iterables: Iterable[Any], random: bool = False, max_combinations: int = 0, optimize_memory: bool = False) -> Iterator[Tuple[Any, ...]]:

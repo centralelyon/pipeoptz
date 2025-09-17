@@ -8,10 +8,10 @@ from .parameter import IntParameter, FloatParameter, ChoiceParameter, BoolParame
 from .pipeline import Pipeline, _product
 from sklearn.exceptions import ConvergenceWarning
 import warnings
-from typing import Any, Callable, Dict, Optional, Union, List, Tuple
+from scipy.stats import norm
+from typing import Any, Callable, Dict, Optional, List, Tuple
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
-from scipy.stats import norm
 
 
 class PipelineOptimizer:
@@ -396,9 +396,12 @@ class PipelineOptimizer:
                     r1, r2 = rd.random(), rd.random()
                     p_val, pb_val, gb_val = particles[i][name], personal_best[i][name], best_particle[name]
                     
-                    if p_val != pb_val: velocities[i][name] = cognitive * r1
-                    elif p_val != gb_val: velocities[i][name] += social * r2
-                    else: velocities[i][name] *= inertia
+                    if p_val != pb_val:
+                        velocities[i][name] = cognitive * r1
+                    elif p_val != gb_val:
+                        velocities[i][name] += social * r2
+                    else:
+                        velocities[i][name] *= inertia
 
                     if rd.random() < velocities[i][name]:
                         param = next(p for p in self.params_to_optimize if f"{p.node_id}.{p.param_name}" == name)

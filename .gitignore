@@ -6,7 +6,7 @@ __pycache__/
 .pytest_cache/
 
 # Distribution / packaging
-./build/
+build/
 dist/
 
 # Environments
@@ -20,6 +20,7 @@ venv/
 # OS specific
 *.DS_Store
 
-src/pipeoptz.egg-info
+src/pipeoptz.egg-info/
 
 site/
+.ruff_cache/

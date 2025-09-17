@@ -1,8 +1,8 @@
 import pytest
 import json
-from unittest.mock import Mock
 
-import sys, os
+import sys
+import os
 sys.path.append(os.path.abspath("../src/"))
 from pipeoptz.pipeline import Pipeline
 from pipeoptz.node import Node, NodeIf
