@@ -30,7 +30,7 @@ def true_pipeline():
     A simple pipeline for the 'true' path of NodeIf.
     """
     p = Pipeline(name="true_path")
-    p.add_node(Node(id="true_node", func=lambda x: f"true_{x}"), predecessors={'x': 'run_params:input'})
+    p.add_node(Node(node_id="true_node", func=lambda x: f"true_{x}"), predecessors={'x': 'run_params:input'})
     return p
 
 @pytest.fixture
@@ -39,7 +39,7 @@ def false_pipeline():
     A simple pipeline for the 'false' path of NodeIf.
     """
     p = Pipeline(name="false_path")
-    p.add_node(Node(id="false_node", func=lambda x: f"false_{x}"), predecessors={'x': 'run_params:input'})
+    p.add_node(Node(node_id="false_node", func=lambda x: f"false_{x}"), predecessors={'x': 'run_params:input'})
     return p
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def loop_pipeline():
     A simple pipeline for loop nodes.
     """
     p = Pipeline(name="loop_pipe")
-    p.add_node(Node(id="add_one", func=lambda loop_var: loop_var + 1), predecessors={'loop_var': 'run_params:loop_var'})
+    p.add_node(Node(node_id="add_one", func=lambda loop_var: loop_var + 1), predecessors={'loop_var': 'run_params:loop_var'})
     return p
 
 
@@ -59,7 +59,7 @@ class TestNode:
         """
         Tests if a Node is initialized correctly.
         """
-        node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
+        node = Node(node_id="add_node", func=simple_add_func, fixed_params={'a': 1})
         assert node.id == "add_node"
         assert node.func == simple_add_func
         assert node.fixed_params == {'a': 1}
@@ -70,14 +70,14 @@ class TestNode:
         """
         Tests the get_id method.
         """
-        node = Node(id="test_id", func=simple_add_func)
+        node = Node(node_id="test_id", func=simple_add_func)
         assert node.get_id() == "test_id"
 
     def test_execute_simple(self, simple_add_func):
         """
         Tests that the basic execution without fixed parameters works correctly.
         """
-        node = Node(id="add_node", func=simple_add_func)
+        node = Node(node_id="add_node", func=simple_add_func)
         result = node.execute(inputs={'a': 5, 'b': 10})
         assert result == 15
 
@@ -85,7 +85,7 @@ class TestNode:
         """
         Tests execution with a mix of fixed and runtime parameters.
         """
-        node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
+        node = Node(node_id="add_node", func=simple_add_func, fixed_params={'a': 1})
         result = node.execute(inputs={'b': 9})
         assert result == 10
 
@@ -93,7 +93,7 @@ class TestNode:
         """
         Tests that memory=True prevents re-execution with the same inputs.
         """
-        node = Node(id="cache_node", func=mock_func_with_call_tracker)
+        node = Node(node_id="cache_node", func=mock_func_with_call_tracker)
         
         result1 = node.execute(inputs={'x': 1})
         assert result1 == "computed"
@@ -108,7 +108,7 @@ class TestNode:
         """
         Tests that memory=True re-executes with different inputs.
         """
-        node = Node(id="cache_node", func=mock_func_with_call_tracker)
+        node = Node(node_id="cache_node", func=mock_func_with_call_tracker)
         node.execute(inputs={'x': 1})
         assert mock_func_with_call_tracker.call_count == 1
         node.execute(inputs={'x': 2})
@@ -124,7 +124,7 @@ class TestNode:
             call_count += 1
             return np.sum(arr)
 
-        node = Node(id="numpy_node", func=numpy_func)
+        node = Node(node_id="numpy_node", func=numpy_func)
         arr1 = np.array([1, 2, 3])
         arr2 = np.array([4, 5, 6])
 
@@ -148,7 +148,7 @@ class TestNode:
         """
         Tests that clear_memory forces re-execution.
         """
-        node = Node(id="cache_node", func=mock_func_with_call_tracker)
+        node = Node(node_id="cache_node", func=mock_func_with_call_tracker)
         
         node.execute(inputs={'x': 1})
         assert mock_func_with_call_tracker.call_count == 1
@@ -164,7 +164,7 @@ class TestNode:
         """
         Tests setting a single fixed parameter.
         """
-        node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
+        node = Node(node_id="add_node", func=simple_add_func, fixed_params={'a': 1})
         node.set_fixed_param('a', 5)
         assert node.get_fixed_params()['a'] == 5
 
@@ -172,7 +172,7 @@ class TestNode:
         """
         Tests that setting a non-existent fixed parameter raises a ValueError.
         """
-        node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
+        node = Node(node_id="add_node", func=simple_add_func, fixed_params={'a': 1})
         with pytest.raises(ValueError, match="Key 'b' is not a fixed parameter of node 'add_node'"):
             node.set_fixed_param('b', 10)
 
@@ -180,7 +180,7 @@ class TestNode:
         """
         Tests the is_fixed_param method.
         """
-        node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
+        node = Node(node_id="add_node", func=simple_add_func, fixed_params={'a': 1})
         assert node.is_fixed_param('a') is True
         assert node.is_fixed_param('b') is False
 
@@ -195,7 +195,7 @@ class TestNodeIf:
         def cond_func(x):
             return x > 0
         node_if = NodeIf(
-            id="if_node",
+            node_id="if_node",
             condition_func=cond_func,
             true_pipeline=true_pipeline,
             false_pipeline=false_pipeline,
@@ -214,7 +214,7 @@ class TestNodeIf:
         def cond_func(val):
             return val > 10
         node_if = NodeIf(
-            id="if_node",
+            node_id="if_node",
             condition_func=cond_func,
             true_pipeline=true_pipeline,
             false_pipeline=false_pipeline
@@ -232,7 +232,7 @@ class TestNodeIf:
         def cond_func(val):
             return val > 10
         node_if = NodeIf(
-            id="if_node",
+            node_id="if_node",
             condition_func=cond_func,
             true_pipeline=true_pipeline,
             false_pipeline=false_pipeline
@@ -250,7 +250,7 @@ class TestNodeIf:
         true_pipeline.get_node("true_node").fixed_params = {'z': 100}
         
         node_if = NodeIf(
-            id="if_node",
+            node_id="if_node",
             condition_func=lambda: True,
             true_pipeline=true_pipeline,
             false_pipeline=false_pipeline,
@@ -274,7 +274,7 @@ class TestNodeIf:
         false_pipeline.get_node("false_node").fixed_params = {'w': 0}
 
         node_if = NodeIf(
-            id="if_node",
+            node_id="if_node",
             condition_func=lambda: True,
             true_pipeline=true_pipeline,
             false_pipeline=false_pipeline,
@@ -301,7 +301,7 @@ class TestNodeFor:
         """
         Tests if a NodeFor is initialized correctly.
         """
-        node_for = NodeFor(id="for_node", loop_pipeline=loop_pipeline, fixed_params={'iterations': 3})
+        node_for = NodeFor(node_id="for_node", loop_pipeline=loop_pipeline, fixed_params={'iterations': 3})
         assert node_for.id == "for_node"
         assert node_for.loop_pipeline == loop_pipeline
         assert node_for.fixed_params == {'iterations': 3}
@@ -310,7 +310,7 @@ class TestNodeFor:
         """
         Tests NodeFor execution with a fixed number of iterations.
         """
-        node_for = NodeFor(id="for_node", loop_pipeline=loop_pipeline, fixed_params={'iterations': 3})
+        node_for = NodeFor(node_id="for_node", loop_pipeline=loop_pipeline, fixed_params={'iterations': 3})
         result = node_for.execute(inputs={'loop_var': 0})
         assert result == 3
 
@@ -318,7 +318,7 @@ class TestNodeFor:
         """
         Tests NodeFor execution with iterations from input.
         """
-        node_for = NodeFor(id="for_node", loop_pipeline=loop_pipeline)
+        node_for = NodeFor(node_id="for_node", loop_pipeline=loop_pipeline)
         result = node_for.execute(inputs={'iterations': 5, 'loop_var': 0})
         assert result == 5
 
@@ -326,7 +326,7 @@ class TestNodeFor:
         """
         Tests that NodeFor raises an error if 'iterations' is missing.
         """
-        node_for = NodeFor(id="for_node", loop_pipeline=loop_pipeline)
+        node_for = NodeFor(node_id="for_node", loop_pipeline=loop_pipeline)
         with pytest.raises(ValueError, match="NodeFor requires an 'iterations' input"):
             node_for.execute(inputs={'loop_var': 0})
 
@@ -334,7 +334,7 @@ class TestNodeFor:
         """
         Tests that NodeFor raises an error if 'loop_var' is missing.
         """
-        node_for = NodeFor(id="for_node", loop_pipeline=loop_pipeline, fixed_params={'iterations': 3})
+        node_for = NodeFor(node_id="for_node", loop_pipeline=loop_pipeline, fixed_params={'iterations': 3})
         with pytest.raises(ValueError, match="NodeFor requires a 'loop_var' input"):
             node_for.execute(inputs={})
 
@@ -348,7 +348,7 @@ class TestNodeWhile:
         """
         def cond_func(loop_var):
             return loop_var < 5
-        node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
+        node_while = NodeWhile(node_id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
         assert node_while.id == "while_node"
         assert node_while.func == cond_func
         assert node_while.loop_pipeline == loop_pipeline
@@ -359,7 +359,7 @@ class TestNodeWhile:
         """
         def cond_func(loop_var):
             return loop_var < 5
-        node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
+        node_while = NodeWhile(node_id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
         result = node_while.execute(inputs={'loop_var': 0})
         assert result == 5
 
@@ -369,7 +369,7 @@ class TestNodeWhile:
         """
         def cond_func(loop_var):
             return True  # Condition is always true
-        node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline, fixed_params={'max_iterations': 3})
+        node_while = NodeWhile(node_id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline, fixed_params={'max_iterations': 3})
         result = node_while.execute(inputs={'loop_var': 0})
         assert result == 3
 
@@ -379,6 +379,6 @@ class TestNodeWhile:
         """
         def cond_func(loop_var):
             return loop_var < 5
-        node_while = NodeWhile(id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
+        node_while = NodeWhile(node_id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
         with pytest.raises(ValueError, match="NodeWhile requires a 'loop_var' input"):
             node_while.execute(inputs={})

@@ -25,8 +25,8 @@ from pipeoptz.parameter import (
 def simple_pipeline():
     """Un pipeline simple avec deux nœuds pour les tests."""
     p = Pipeline(name="test_pipeline")
-    p.add_node(Node(id="node1", func=lambda a, **kwargs: a * 2, fixed_params={'a': 1, 'c': 'x'}))
-    p.add_node(Node(id="node2", func=lambda b, **kwargs: b + 1, fixed_params={'b': 1, 'd': True}), predecessors={'b': 'node1'})
+    p.add_node(Node(node_id="node1", func=lambda a, **kwargs: a * 2, fixed_params={'a': 1, 'c': 'x'}))
+    p.add_node(Node(node_id="node2", func=lambda b, **kwargs: b + 1, fixed_params={'b': 1, 'd': True}), predecessors={'b': 'node1'})
     return p
 
 @pytest.fixture

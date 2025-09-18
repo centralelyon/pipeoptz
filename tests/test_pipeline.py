@@ -26,8 +26,8 @@ def basic_pipeline(add_func, mul_func):
     A simple linear pipeline: run_params -> add -> mul
     """
     p = Pipeline(name="basic")
-    p.add_node(Node(id="add", func=add_func), predecessors={'a': 'run_params:x', 'b': 'run_params:y'})
-    p.add_node(Node(id="mul", func=mul_func, fixed_params={'b': 10}), predecessors={'a': 'add'})
+    p.add_node(Node(node_id="add", func=add_func), predecessors={'a': 'run_params:x', 'b': 'run_params:y'})
+    p.add_node(Node(node_id="mul", func=mul_func, fixed_params={'b': 10}), predecessors={'a': 'add'})
     return p
 
 @pytest.fixture
@@ -36,9 +36,9 @@ def cyclic_pipeline(identity_func):
     A pipeline with a cycle to test error detection.
     """
     p = Pipeline(name="cyclic")
-    p.add_node(Node(id="A", func=identity_func), predecessors={'x': 'C'})
-    p.add_node(Node(id="B", func=identity_func), predecessors={'x': 'A'})
-    p.add_node(Node(id="C", func=identity_func), predecessors={'x': 'B'})
+    p.add_node(Node(node_id="A", func=identity_func), predecessors={'x': 'C'})
+    p.add_node(Node(node_id="B", func=identity_func), predecessors={'x': 'A'})
+    p.add_node(Node(node_id="C", func=identity_func), predecessors={'x': 'B'})
     return p
 
 @pytest.fixture
@@ -47,15 +47,15 @@ def node_if_pipeline(identity_func):
     A pipeline containing a NodeIf.
     """
     true_pipe = Pipeline(name="true_branch")
-    true_pipe.add_node(Node(id="true_op", func=lambda x: x + 1), predecessors={'x': 'run_params:val'})
+    true_pipe.add_node(Node(node_id="true_op", func=lambda x: x + 1), predecessors={'x': 'run_params:val'})
 
     false_pipe = Pipeline(name="false_branch")
-    false_pipe.add_node(Node(id="false_op", func=lambda x: x - 1), predecessors={'x': 'run_params:val'})
+    false_pipe.add_node(Node(node_id="false_op", func=lambda x: x - 1), predecessors={'x': 'run_params:val'})
 
     p = Pipeline(name="conditional")
-    p.add_node(Node(id="start", func=identity_func), predecessors={'x': 'run_params:start_val'})
+    p.add_node(Node(node_id="start", func=identity_func), predecessors={'x': 'run_params:start_val'})
     node_if = NodeIf(
-        id="conditional_node",
+        node_id="conditional_node",
         condition_func=lambda c: c > 10,
         true_pipeline=true_pipe,
         false_pipeline=false_pipe
@@ -69,8 +69,8 @@ def loop_pipeline(add_func):
     A pipeline with a looping node.
     """
     p = Pipeline(name="looping")
-    p.add_node(Node(id="data_provider", func=lambda: [1, 2, 3]), predecessors={})
-    p.add_node(Node(id="add_one", func=add_func, fixed_params={'b': 1}), predecessors={'[a]': 'data_provider'})
+    p.add_node(Node(node_id="data_provider", func=lambda: [1, 2, 3]), predecessors={})
+    p.add_node(Node(node_id="add_one", func=add_func, fixed_params={'b': 1}), predecessors={'[a]': 'data_provider'})
     return p
 
 @pytest.fixture
@@ -84,8 +84,8 @@ def failing_loop_pipeline():
         return a + b
 
     p = Pipeline(name="failing_loop")
-    p.add_node(Node(id="data_provider", func=lambda: [1, 2, 3]), predecessors={})
-    p.add_node(Node(id="add_one_fail", func=fail_on_two, fixed_params={'b': 1}), predecessors={'[a]': 'data_provider'})
+    p.add_node(Node(node_id="data_provider", func=lambda: [1, 2, 3]), predecessors={})
+    p.add_node(Node(node_id="add_one_fail", func=fail_on_two, fixed_params={'b': 1}), predecessors={'[a]': 'data_provider'})
     return p
 
 
@@ -107,7 +107,7 @@ class TestPipelineStructure:
         Tests adding a node to the pipeline.
         """
         p = Pipeline(name="test")
-        node = Node(id="add1", func=add_func)
+        node = Node(node_id="add1", func=add_func)
         p.add_node(node, predecessors={'a': 'run_params:x'})
         assert "add1" in p.nodes
         assert p.nodes["add1"] == node
@@ -118,8 +118,8 @@ class TestPipelineStructure:
         Tests that adding a node with a duplicate id raises an error.
         """
         p = Pipeline(name="test")
-        node1 = Node(id="add1", func=add_func)
-        node2 = Node(id="add1", func=add_func)
+        node1 = Node(node_id="add1", func=add_func)
+        node2 = Node(node_id="add1", func=add_func)
         p.add_node(node1)
         with pytest.raises(ValueError, match="A node with id 'add1' already exists."):
             p.add_node(node2)
@@ -279,8 +279,8 @@ class TestPipelineMultiOutput:
         Tests pipeline with a node that has multiple outputs, accessed by key.
         """
         p = Pipeline(name="multi_output_key")
-        p.add_node(Node(id="multi_out", func=lambda: {'x': 1, 'y': 2}))
-        p.add_node(Node(id="add", func=add_func), predecessors={'a': 'multi_out:x', 'b': 'multi_out:y'})
+        p.add_node(Node(node_id="multi_out", func=lambda: {'x': 1, 'y': 2}))
+        p.add_node(Node(node_id="add", func=add_func), predecessors={'a': 'multi_out:x', 'b': 'multi_out:y'})
         last_node_id, outputs, _ = p.run()
         assert last_node_id == "add"
         assert outputs['add'] == 3
@@ -290,8 +290,8 @@ class TestPipelineMultiOutput:
         Tests pipeline with a node that has multiple outputs, accessed by index.
         """
         p = Pipeline(name="multi_output_index")
-        p.add_node(Node(id="multi_out", func=lambda: [10, 20]))
-        p.add_node(Node(id="add", func=add_func), predecessors={'a': 'multi_out:0', 'b': 'multi_out:1'})
+        p.add_node(Node(node_id="multi_out", func=lambda: [10, 20]))
+        p.add_node(Node(node_id="add", func=add_func), predecessors={'a': 'multi_out:0', 'b': 'multi_out:1'})
         last_node_id, outputs, _ = p.run()
         assert last_node_id == "add"
         assert outputs['add'] == 30

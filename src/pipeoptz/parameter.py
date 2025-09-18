@@ -112,8 +112,8 @@ class IntParameter(Parameter):
         if value < self.min_value or value > self.max_value:
             raise ValueError(f"Value must be between {self.min_value} and {self.max_value}.")
         if (value-self.min_value) % self.step:
-            raise ValueError(f"Value must be in \
-                             range({self.min_value}, {self.max_value+1}, {self.step}).")
+            raise ValueError("Value must be in " +
+                             f"range({self.min_value}, {self.max_value+1}, {self.step}).")
         self.value = value
 
     def get_value(self) -> int:
@@ -203,8 +203,8 @@ class FloatParameter(Parameter):
         if value < self.min_value or value > self.max_value:
             raise ValueError(f"Value must be between {self.min_value} and {self.max_value}.")
         if self.step and (value-self.min_value) % self.step > self.step/10:
-            raise ValueError(f"Value must be in \
-                             range({self.min_value}, {self.max_value} included, {self.step}).")
+            raise ValueError("Value must be in " +
+                             f"range({self.min_value}, {self.max_value} included, {self.step}).")
 
         if self.step:
             self.value = float(value-(value-self.min_value)%self.step)
@@ -235,8 +235,11 @@ class FloatParameter(Parameter):
         return r
 
     def get_description(self) -> Dict[str, Any]:
-        return {"type": "float", "value": self.value, \
-                "min": self.min_value, "max": self.max_value, "step": self.step}
+        return {"type": "float",
+                "value": self.value,
+                "min": self.min_value,
+                "max": self.max_value,
+                "step": self.step}
 
 class ChoiceParameter(Parameter):
     """
@@ -299,7 +302,9 @@ class ChoiceParameter(Parameter):
         return r
 
     def get_description(self) -> Dict[str, Any]:
-        return {"type": "choice", "value": self.value, "choices": self.choices}
+        return {"type": "choice",
+                "value": self.value,
+                "choices": self.choices}
 
 class MultiChoiceParameter(Parameter):
     """
@@ -368,8 +373,8 @@ class MultiChoiceParameter(Parameter):
         if not isinstance(value, list):
             raise ValueError(f"Value must be a list, but received type {type(value)}.")
         if len(value) < self.min_choices or len(value) > self.max_choices:
-            raise ValueError(f"The list of values must contain between \
-                             {self.min_choices} and {self.max_choices} items.")
+            raise ValueError("The list of values must contain between " +
+                             f"{self.min_choices} and {self.max_choices} items.")
         for v in value:
             if v not in self.choices:
                 raise ValueError(f"The value '{v}' is not in the allowed choices: {self.choices}.")
@@ -458,4 +463,5 @@ class BoolParameter(Parameter):
         return r
 
     def get_description(self) -> Dict[str, Any]:
-        return {"type": "bool", "value": self.value}
+        return {"type": "bool",
+                "value": self.value}

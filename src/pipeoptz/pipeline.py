@@ -369,8 +369,8 @@ class Pipeline:
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
                 dot_lines.append('    style=dashed;')
                 if show_function:
-                    dot_lines.append(f'    "{full_id}" [shape=diamond, label=< <B>{node_id}</B> \
-                                     <BR/><FONT POINT-SIZE=\"10\">{func_label}</FONT> >];')
+                    dot_lines.append(f'    "{full_id}" [shape=diamond, label=< <B>{node_id}</B> '+
+                                     f'<BR/><FONT POINT-SIZE=\"10\">{func_label}</FONT> >];')
                 else:
                     dot_lines.append(f'    "{full_id}" [shape=diamond, \
                                      label=< <B>{node_id}</B> >];')
@@ -380,53 +380,53 @@ class Pipeline:
                 false_first = node.false_pipeline.static_order()[0]
                 true_last = node.true_pipeline.static_order()[-1]
                 false_last = node.false_pipeline.static_order()[-1]
-                dot_lines.append(f'    "{full_id}" -> "{full_id}_T_{true_first}" \
-                                 [label="True", tailport=s];')
-                dot_lines.append(f'    "{full_id}" -> "{full_id}_F_{false_first}" \
-                                 [label="False", tailport=s];')
-                dot_lines.append(f'    "{full_id}_output" [shape=diamond, \
-                                 label=< <FONT POINT-SIZE="10"> If Output</FONT> >];')
-                dot_lines.append(f'    "{full_id}_T_{true_last}" -> "{full_id}_output" \
-                                 [tailport=s];')
-                dot_lines.append(f'    "{full_id}_F_{false_last}" -> "{full_id}_output" \
-                                 [tailport=s];')
+                dot_lines.append(f'    "{full_id}" -> "{full_id}_T_{true_first}" '+
+                                 '[label="True", tailport=s];')
+                dot_lines.append(f'    "{full_id}" -> "{full_id}_F_{false_first}" '+
+                                 '[label="False", tailport=s];')
+                dot_lines.append(f'    "{full_id}_output" [shape=diamond, '+
+                                 'label=< <FONT POINT-SIZE="10"> If Output</FONT> >];')
+                dot_lines.append(f'    "{full_id}_T_{true_last}" -> "{full_id}_output" '+
+                                 '[tailport=s];')
+                dot_lines.append(f'    "{full_id}_F_{false_last}" -> "{full_id}_output" '+
+                                 '[tailport=s];')
                 dot_lines.append('  }')
             elif isinstance(node, NodeFor):
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
                 dot_lines.append('    style=dashed;')
-                dot_lines.append(f'    "{full_id}" [shape=Mdiamond, label=< <B>{node_id}</B><BR/>\
-                                 <FONT POINT-SIZE="10">For Loop</FONT> >];')
+                dot_lines.append(f'    "{full_id}" [shape=Mdiamond, label=< <B>{node_id}</B><BR/>'+
+                                 '<FONT POINT-SIZE="10">For Loop</FONT> >];')
                 dot_lines.append(node.loop_pipeline.to_dot(None, _prefix=full_id + "_L_"))
                 loop_first = node.loop_pipeline.static_order()[0]
                 loop_last = node.loop_pipeline.static_order()[-1]
-                dot_lines.append(f'    "{full_id}" -> "{full_id}_L_{loop_first}" \
-                                 [label="start", tailport=s];')
-                dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}" \
-                                 [label="next"];')
-                dot_lines.append(f'    "{full_id}_output" [shape=diamond, \
-                                 label=< <FONT POINT-SIZE="10"> For Output</FONT> >];')
+                dot_lines.append(f'    "{full_id}" -> "{full_id}_L_{loop_first}" '+
+                                 '[label="start", tailport=s];')
+                dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}" '+
+                                 '[label="next"];')
+                dot_lines.append(f'    "{full_id}_output" [shape=diamond, '+
+                                 'label=< <FONT POINT-SIZE="10"> For Output</FONT> >];')
                 dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}_output";')
                 dot_lines.append('  }')
             elif isinstance(node, NodeWhile):
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
                 dot_lines.append('    style=dashed;')
-                dot_lines.append(f'    "{full_id}" [shape=Mdiamond, label=< <B>{node_id}</B><BR/>\
-                                 <FONT POINT-SIZE="10">While Loop</FONT> >];')
+                dot_lines.append(f'    "{full_id}" [shape=Mdiamond, label=< <B>{node_id}</B><BR/>'+
+                                 '<FONT POINT-SIZE="10">While Loop</FONT> >];')
                 dot_lines.append(node.loop_pipeline.to_dot(None, _prefix=full_id + "_L_"))
                 loop_first = node.loop_pipeline.static_order()[0]
                 loop_last = node.loop_pipeline.static_order()[-1]
-                dot_lines.append(f'    "{full_id}" -> "{full_id}_L_{loop_first}" \
-                                 [label="start", tailport=s];')
-                dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}" \
-                                 [label="next"];')
-                dot_lines.append(f'    "{full_id}_output" [shape=diamond, \
-                                 label=< <FONT POINT-SIZE="10"> While Output</FONT> >];')
+                dot_lines.append(f'    "{full_id}" -> "{full_id}_L_{loop_first}" '+
+                                 '[label="start", tailport=s];')
+                dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}" '+
+                                 '[label="next"];')
+                dot_lines.append(f'    "{full_id}_output" [shape=diamond, '+
+                                 'label=< <FONT POINT-SIZE="10"> While Output</FONT> >];')
                 dot_lines.append(f'    "{full_id}_L_{loop_last}" -> "{full_id}_output";')
                 dot_lines.append('  }')
             elif isinstance(node, Pipeline):
                 dot_lines.append(f'  subgraph cluster_{full_id} {{')
-                dot_lines.append(f'    label="SubPipeline: {node.name}"; \
-                                 style=filled; color=lightgrey;')
+                dot_lines.append(f'    label="SubPipeline: {node.name}"; '+
+                                 'style=filled; color=lightgrey;')
                 dot_lines.append(node.to_dot(None, _prefix=full_id + "_"))
                 dot_lines.append('  }')
             elif add_optz or not node_id.startswith("[optz]"):
@@ -436,14 +436,14 @@ class Pipeline:
                     func_label = f"{func_module}.{func_name}"
                 shape = "doubleoctagon" if is_last and _prefix == "" else "box"
                 if show_function:
-                    dot_lines.append(f'    "{full_id}" [shape={shape}, \label=< <B>{node_id}</B> \
-                                     <BR/><FONT POINT-SIZE=\"10\">{func_label}</FONT> >];')
+                    dot_lines.append(f'    "{full_id}" [shape={shape}, label=< <B>{node_id}</B> '+
+                                     f'<BR/><FONT POINT-SIZE=\"10\">{func_label}</FONT> >];')
                 else:
-                    dot_lines.append(f'    "{full_id}" [shape={shape}, \
-                                     label=< <B>{node_id}</B> >];')
+                    dot_lines.append(f'    "{full_id}" [shape={shape}, '+
+                                     f'label=< <B>{node_id}</B> >];')
                 if (param_keys := list(node.get_fixed_params().keys())) != []:
-                    dot_lines[-1] = dot_lines[-1][:-3] + f'<BR/><FONT POINT-SIZE="8">\
-                                    <I>({", ".join(param_keys)})</I></FONT> >];'
+                    dot_lines[-1] = dot_lines[-1][:-3] + '<BR/><FONT POINT-SIZE="8">'+\
+                                    f'<I>({", ".join(param_keys)})</I></FONT> >];'
 
         for to_id, deps in self.node_dependencies.items():
             for input_name, from_id in deps.items():
@@ -455,20 +455,20 @@ class Pipeline:
                         continue
                     input_label = input_name.split(":")[-1]
                     dot_lines.append(f'  {{ rank=source; "params_{input_label}"; }}')
-                    dot_lines.append(f'  "params_{input_label}" [shape=ellipse, style=dashed, \
-                                     label=< <FONT POINT-SIZE="10">{input_label}</FONT> >];')
-                    dot_lines.append(f'  "params_{input_label}" -> "{to_label}" \
-                                     [label="{input_label}", fontsize=10, style=dashed];')
+                    dot_lines.append(f'  "params_{input_label}" [shape=ellipse, style=dashed, '+
+                                     f'label=< <FONT POINT-SIZE="10">{input_label}</FONT> >];')
+                    dot_lines.append(f'  "params_{input_label}" -> "{to_label}" '+
+                                     f'[label="{input_label}", fontsize=10, style=dashed];')
                 elif isinstance(self.nodes[from_id], (NodeIf, NodeFor, NodeWhile)):
-                    dot_lines.append(f'  "{from_label}_output" -> "{to_label}" \
-                                     [label="{label_text}", fontsize=9];')
+                    dot_lines.append(f'  "{from_label}_output" -> "{to_label}" '+
+                                     f'[label="{label_text}", fontsize=9];')
                 elif isinstance(self.nodes[to_id], (NodeIf, NodeWhile)) and \
                      input_name.startswith("condition_func:"):
-                    dot_lines.append(f'  "{from_label}" -> "{to_label}" \
-                                     [label="{label_text[15:]}", fontsize=9, headport=w];')
+                    dot_lines.append(f'  "{from_label}" -> "{to_label}" '+
+                                     f'[label="{label_text[15:]}", fontsize=9, headport=w];')
                 elif add_optz or not from_label.startswith("[optz]"):
-                    dot_lines.append(f'  "{from_label}" -> "{to_label}" \
-                                     [label="{label_text}", fontsize=9];')
+                    dot_lines.append(f'  "{from_label}" -> "{to_label}" '+
+                                     f'[label="{label_text}", fontsize=9];')
 
         dot_lines.append("}")
         dot_str = "\n".join(dot_lines)
@@ -489,8 +489,8 @@ class Pipeline:
             res = os.system(f'dot -Tpng -Gdpi={dpi} \
                             "{os.path.splitext(filepath)[0] + ".dot"}" -o "{filepath}"')
         except Exception as e:
-            raise RuntimeError("Error during PNG generation.\n\
-                               Do you have graphviz installed?") from e
+            raise RuntimeError("Error during PNG generation.\n"+
+                               "Do you have graphviz installed?") from e
         if res:
             print("Error during PNG generation")
         if delete:

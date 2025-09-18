@@ -143,7 +143,7 @@ class PipelineOptimizer:
                 loss += self.loss(results[-1], y[i])
             if self.max_time_pipeline != 0 and t[0] > self.max_time_pipeline:
                 return results+[None]*(len(X)-i-1), float("inf")
-        loss /= len(X)+1
+        loss /= len(X)
         return results, loss
 
     def plot_convergence(self) -> np.ndarray:
