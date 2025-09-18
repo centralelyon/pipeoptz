@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pipeoptz"
-version = "0.1.4"
+version = "0.1.5"
 authors = [{ name="Nicolas PENGOV", email="nicolas.pengov@etu.ec-lyon.fr" }]
 description = "A Python library for creating and optimizing processing pipeline."
 readme = "README.md"

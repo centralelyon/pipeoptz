@@ -6,7 +6,7 @@ from .parameter import IntParameter, FloatParameter, \
 from .pipeline import Pipeline
 from .optimizer import PipelineOptimizer
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __all__ = ["Node", "NodeIf", "NodeFor", "NodeWhile", "IntParameter",
            "FloatParameter", "BoolParameter", "ChoiceParameter",
            "MultiChoiceParameter", "Pipeline", "PipelineOptimizer"]
