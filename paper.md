@@ -1,5 +1,9 @@
 ---
 title: "PipeOptz: A Python Library for Pipeline Optimization"
+tags:
+  - Python
+  - Pipeline
+  - Optimization
 authors:
   - name: Nicolas PENGOV
     orcid: # TODO: Add your ORCID here
@@ -113,6 +117,8 @@ im.show()
   <img src="https://github.com/centralelyon/pipeoptz/blob/main/examples/opti/opti.png?raw=true" width="250"/>
   <figcaption>Figure 1: Visualization of the example pipeline.</figcaption>
 </div>
+
+# Citations
 
 # Acknowledgements
 
