@@ -1,17 +1,14 @@
 # PipeOptz: A Framework for Pipeline Optimization
 
 <p align="center">
+  <a href="https://pypi.org/project/pipeoptz/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/pipeoptz"></a>
   <a href="https://pypi.org/project/pipeoptz/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pipeoptz"></a>
   <a href="https://github.com/centralelyon/pipeoptz/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/centralelyon/pipeoptz/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://pypi.org/project/pipeoptz/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/pipeoptz"></a>
   <a href="https://github.com/centralelyon/pipeoptz/blob/main/LICENSE"><img alt="PyPI - License" src="https://img.shields.io/pypi/l/pipeoptz"></a>
+  <a href=""><img alt="pylint Score" src="https://mperlet.github.io/pybadge/badges/9.50.svg"></a>
 </p>
 
 **PipeOptz** is a Python library for building, visualizing, and optimizing complex processing pipelines. It allows you to define a series of operations as a graph, manage the flow of data, and then automatically tune the parameters of those operations to achieve a desired outcome.
-
-While it can be used for any sequence of operations, it is particularly powerful for optimizing image processing workflows.
-
-## Core Concepts
 
 The library is built around a few key ideas:
 
@@ -23,21 +20,32 @@ The library is built around a few key ideas:
 
 - **`PipelineOptimizer`**: This is the engine that tunes your pipeline. It takes your pipeline, a set of `Parameter`s to vary, and a `loss_function` to minimize, and uses metaheuristic algorithms (like Genetic Algorithms, Bayesian Optimization, etc.) to find the best parameter values.
 
+The package is provided with a `LICENSE` file which contains the license terms.
+
 ## Installation
 
-Install PipeOptz from PyPI:
+### Installation from PyPi
+The easiest way to install PipeOptz is through pip. Open your terminal and run the follwing command:
 
 ```bash
-pip install pipeoptz
+pip install --upgrade --user pipeoptz
 ```
 
-For image processing, you will also need OpenCV, which can be installed alongside:
+### Installation from source
+If you're reading this `README` from a source distribution, you can install PipeOptz after downloading it with:
 
 ```bash
-pip install pipeoptz opencv-python
+pip install --upgrade --user .
 ```
 
-## Usage: A Simple Example
+You can also install the latest development version directly from Github:
+```bash
+pip install --upgrade --user https://github.com/centralelyon/pipeoptz/archive/main.zip
+```
+
+For local development install PipeOptz in editable mode:
+
+## Quick Start
 
 Let's create a basic pipeline with a few arithmetic operations to see how it works.
 
@@ -75,7 +83,7 @@ print(f"History of all node outputs: {history}")
 
 # 5. Visualize the pipeline
 # This creates a .dot file and a .png image of the graph
-pipeline.to_dot("pipeline_example.dot", generate_png=True)
+pipeline.to_dot("basic.dot", generate_png=True)
 ```
 
 This script will output:
@@ -86,10 +94,10 @@ Result of final node 'C': 81
 History of all node outputs: {'A': 8, 'B': 80, 'C': 81}
 ```
 
-And it will generate an image (`pipeline_example.png`) of your pipeline's structure:
+And it will generate an image (`basic.png`) of your pipeline's structure, taken from the `basic.ipynb` example:
 
 <div align="center">
-  <img src="examples/basic/pipeline_example.png" alt="Simple Pipeline Graph" width="150"/>
+  <img src="https://github.com/centralelyon/pipeoptz/blob/main/examples/basic/basic.png?raw=true" alt="Simple Pipeline Graph" width="120"/>
 </div>
 
 ## Optimizing a Pipeline
@@ -104,10 +112,39 @@ To do this, you would:
 
 For a complete, runnable optimization example, please see the Jupyter Notebook at: **`examples/advanced/simple.ipynb`**.
 
+## Examples
+Several example pipelines are provided in the `examples/` directory. These include:
+-   `basic/`: A simple pipeline with arithmetic operations.
+-   `cond/`: A pipeline demonstrating conditional branching.
+-   `for/`: A pipeline demonstrating for loops.
+-   `while/`: A pipeline demonstrating while loops.
+-   `opti/`: A pipeline demonstrating optimization pipeline with tunable parameters.
+
+## Building Docs
+
+This project uses [MkDocs](https://www.mkdocs.org/) to generate documentation.
+
+To serve the documentation locally, run the following command from the root of the project:
+
+```bash
+mkdocs serve
+```
+
+This will start a local server, and you can view the documentation by opening your browser to `http://127.0.0.1:8000`.
+
+## Testing
+PipeOptz makes use of pytest for its test suite.
+```
+pip install pytest
+pytest
+```
+
 ## Contributing
 
-Contributions are welcome! If you have suggestions for improvements or find a bug, please feel free to open an issue or submit a pull request.
+Contributions are welcome! Please see the `CONTRIBUTING.md` file for details on how to get started.
 
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
+
+This research is partially funded by ANR, the French National Research Agency with the GLACIS project (grant ANR-21-CE33-0002).
