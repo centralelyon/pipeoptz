@@ -1,7 +1,9 @@
-import numpy as np
+"""Defines the different types of parameters that can be used in a pipeline."""
+
 import random as rd
 from math import comb
 from typing import Any, Union, List, Dict
+import numpy as np
 
 class Parameter:
     """
@@ -29,7 +31,7 @@ class Parameter:
         This should be overridden in subclasses.
         """
         self.value = value
-    
+
     def get_value(self) -> Any:
         """
         Returns the current value of the parameter.
@@ -45,6 +47,10 @@ class Parameter:
         raise NotImplementedError("This method must be implemented in subclasses.")
 
     def get_description(self) -> Dict[str, Any]:
+        """
+        Returns a description of the parameter's parametric space.
+        This should be overridden in subclasses.
+        """
         raise NotImplementedError("This method must be implemented in subclasses.")
 
 
@@ -65,7 +71,8 @@ class IntParameter(Parameter):
     MAXINT: int = 2**63 - 1
     MININT: int = -2**63
 
-    def __init__(self, node_id: str, param_name: str, min_value: int, max_value: int, step: int = 1) -> None:
+    def __init__(self, node_id: str, param_name: str, \
+                 min_value: int, max_value: int, step: int = 1) -> None:
         """
         Initializes an IntParameter.
 
@@ -79,16 +86,17 @@ class IntParameter(Parameter):
             ValueError: If min_value or max_value are not integers, or if
                         min_value is greater than max_value.
         """
-        if not isinstance(min_value, (int, np.integer)) or not isinstance(max_value, (int, np.integer)):
+        if not isinstance(min_value, (int, np.integer)) or \
+           not isinstance(max_value, (int, np.integer)):
             raise ValueError("min_value and max_value must be integers.")
         if min_value > max_value:
             raise ValueError("min_value cannot be greater than max_value.")
-        super(IntParameter, self).__init__(node_id, param_name)
+        super().__init__(node_id, param_name)
         self.min_value: int = max(min_value, self.MININT)
         self.max_value: int = min(max_value, self.MAXINT)
         self.step: int = step
         self.get_random_value(True)
-    
+
     def set_value(self, value: int) -> None:
         """
         Sets the value of the parameter, ensuring it is within the valid range.
@@ -101,16 +109,17 @@ class IntParameter(Parameter):
         """
         if not isinstance(value, (int, np.integer)):
             raise ValueError(f"Value must be an integer, but 'value' is of type {type(value)}.")
-        elif value < self.min_value or value > self.max_value:
+        if value < self.min_value or value > self.max_value:
             raise ValueError(f"Value must be between {self.min_value} and {self.max_value}.")
-        elif (value-self.min_value) % self.step:
-            raise ValueError(f"Value must be in range({self.min_value}, {self.max_value+1}, {self.step}).")
+        if (value-self.min_value) % self.step:
+            raise ValueError(f"Value must be in \
+                             range({self.min_value}, {self.max_value+1}, {self.step}).")
         self.value = value
 
     def get_value(self) -> int:
         """Returns the current value of the parameter."""
         return self.value
-    
+
     def get_random_value(self, set_value: bool = False) -> int:
         """
         Generates a random integer within the defined range.
@@ -128,7 +137,11 @@ class IntParameter(Parameter):
         return r
 
     def get_description(self) -> Dict[str, Any]:
-        return {"type": "int", "value": self.value, "min": self.min_value, "max": self.max_value, "step": self.step}
+        return {"type": "int",
+                "value": self.value,
+                    "min": self.min_value,
+                    "max": self.max_value,
+                    "step": self.step}
 
 
 class FloatParameter(Parameter):
@@ -148,7 +161,8 @@ class FloatParameter(Parameter):
     MAXFLOAT: float = 1.7976931348623157e+308
     MINFLOAT: float = -1.7976931348623157e+308
 
-    def __init__(self, node_id: str, param_name: str, min_value: float, max_value: float, step: float = 0) -> None:
+    def __init__(self, node_id: str, param_name: str, \
+                 min_value: float, max_value: float, step: float = 0) -> None:
         """
         Initializes a FloatParameter.
 
@@ -162,12 +176,13 @@ class FloatParameter(Parameter):
             ValueError: If min_value or max_value are not floats, or if
                         min_value is greater than max_value.
         """
-        if not isinstance(min_value, (float, int, np.integer, np.floating)) or not isinstance(max_value, (float, int, np.integer, np.floating)):
+        if not isinstance(min_value, (float, int, np.integer, np.floating)) or \
+           not isinstance(max_value, (float, int, np.integer, np.floating)):
             raise ValueError("min_value and max_value must be floats.")
         if min_value > max_value:
             raise ValueError("min_value cannot be greater than max_value.")
-        
-        super(FloatParameter, self).__init__(node_id, param_name)
+
+        super().__init__(node_id, param_name)
         self.min_value: float = max(float(min_value), self.MINFLOAT)
         self.max_value: float = min(float(max_value), self.MAXFLOAT)
         self.step: float = step
@@ -185,16 +200,17 @@ class FloatParameter(Parameter):
         """
         if not isinstance(value, (float, int)):
             raise ValueError(f"The value must be a float, but 'value' is of type {type(value)}.")
-        elif value < self.min_value or value > self.max_value:
+        if value < self.min_value or value > self.max_value:
             raise ValueError(f"Value must be between {self.min_value} and {self.max_value}.")
-        elif self.step and (value-self.min_value) % self.step > self.step/10:
-            raise ValueError(f"Value must be in range({self.min_value}, {self.max_value} included, {self.step}).")
-        
+        if self.step and (value-self.min_value) % self.step > self.step/10:
+            raise ValueError(f"Value must be in \
+                             range({self.min_value}, {self.max_value} included, {self.step}).")
+
         if self.step:
             self.value = float(value-(value-self.min_value)%self.step)
         else:
             self.value = float(value)
-    
+
     def get_value(self) -> float:
         """
         Returns the current value of the parameter."""
@@ -219,7 +235,8 @@ class FloatParameter(Parameter):
         return r
 
     def get_description(self) -> Dict[str, Any]:
-        return {"type": "float", "value": self.value, "min": self.min_value, "max": self.max_value, "step": self.step}
+        return {"type": "float", "value": self.value, \
+                "min": self.min_value, "max": self.max_value, "step": self.step}
 
 class ChoiceParameter(Parameter):
     """
@@ -243,10 +260,10 @@ class ChoiceParameter(Parameter):
             param_name (str): The name of the parameter.
             choices (list): A list of the possible values for the parameter.
         """
-        super(ChoiceParameter, self).__init__(node_id, param_name)
+        super().__init__(node_id, param_name)
         self.choices: List[Any] = choices
         self.get_random_value(True)
-      
+
     def set_value(self, value: Any) -> None:
         """
         Sets the value of the parameter, ensuring it is a valid choice.
@@ -264,7 +281,7 @@ class ChoiceParameter(Parameter):
     def get_value(self) -> Any:
         """Returns the current value of the parameter."""
         return self.value
-    
+
     def get_random_value(self, set_value: bool = False) -> Any:
         """
         Generates a random value from the list of choices.
@@ -299,7 +316,8 @@ class MultiChoiceParameter(Parameter):
         max_choices (int): The maximum number of items to select.
         value (list): The currently selected list of choices.
     """
-    def __init__(self, node_id: str, param_name: str, choices: List[Any], min_choices: int = 1, max_choices: Union[int, None] = None) -> None:
+    def __init__(self, node_id: str, param_name: str, choices: List[Any], \
+                 min_choices: int = 1, max_choices: Union[int, None] = None) -> None:
         """
         Initializes a MultiChoiceParameter.
 
@@ -322,7 +340,7 @@ class MultiChoiceParameter(Parameter):
             raise ValueError("min_choices cannot be greater than max_choices.")
         if min_choices < 1:
             raise ValueError("min_choices must be at least 1.")
-        super(MultiChoiceParameter, self).__init__(node_id, param_name)
+        super().__init__(node_id, param_name)
         self.choices: List[Any] = choices
         self.min_choices: int = min_choices
         if max_choices is None:
@@ -333,7 +351,7 @@ class MultiChoiceParameter(Parameter):
             self.max_choices: int = max_choices
 
         n: int = len(self.choices)
-        self._C: List[int] =  [comb(n, k) for k in range(self.min_choices, self.max_choices + 1)]
+        self._c: List[int] =  [comb(n, k) for k in range(self.min_choices, self.max_choices + 1)]
         self.get_random_value(True)
 
     def set_value(self, value: List[Any]) -> None:
@@ -350,7 +368,8 @@ class MultiChoiceParameter(Parameter):
         if not isinstance(value, list):
             raise ValueError(f"Value must be a list, but received type {type(value)}.")
         if len(value) < self.min_choices or len(value) > self.max_choices:
-            raise ValueError(f"The list of values must contain between {self.min_choices} and {self.max_choices} items.")
+            raise ValueError(f"The list of values must contain between \
+                             {self.min_choices} and {self.max_choices} items.")
         for v in value:
             if v not in self.choices:
                 raise ValueError(f"The value '{v}' is not in the allowed choices: {self.choices}.")
@@ -359,7 +378,7 @@ class MultiChoiceParameter(Parameter):
     def get_value(self) -> List[Any]:
         """Returns the current list of selected values."""
         return self.value
-    
+
     def get_random_value(self, set_value: bool = False) -> List[Any]:
         """
         Generates a random sub-list of choices that respects the size constraints.
@@ -371,14 +390,18 @@ class MultiChoiceParameter(Parameter):
         Returns:
             list: A random list of choices.
         """
-        k: int = rd.choices(range(self.min_choices, self.max_choices + 1), weights=self._C, k=1)[0]
+        k: int = rd.choices(range(self.min_choices, self.max_choices + 1), weights=self._c, k=1)[0]
         r: List[Any] = rd.sample(self.choices, k=k)
         if set_value:
             self.set_value(r)
         return r
 
     def get_description(self) -> Dict[str, Any]:
-        return {"type": "multichoice", "value": self.value, "choices": self.choices, "min_choices": self.min_choices, "max_choices": self.max_choices}
+        return {"type": "multichoice",
+                "value": self.value,
+                "choices": self.choices,
+                "min_choices": self.min_choices,
+                "max_choices": self.max_choices}
 
 class BoolParameter(Parameter):
     """
@@ -397,7 +420,7 @@ class BoolParameter(Parameter):
             node_id (str): The ID of the node this parameter belongs to.
             param_name (str): The name of the parameter.
         """
-        super(BoolParameter, self).__init__(node_id, param_name)
+        super().__init__(node_id, param_name)
         self.get_random_value(True)
 
     def set_value(self, value: bool) -> None:

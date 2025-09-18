@@ -1,3 +1,5 @@
+"Defines the nodes, the basic building blocks of a pipeline."
+
 from __future__ import annotations
 from typing import Any, Callable, Dict, Optional, Union, List, TYPE_CHECKING
 if TYPE_CHECKING:
@@ -20,9 +22,10 @@ class Node:
         input_hash_last_exec: Caches the hash of the inputs from the last execution,
             used for memory optimization.
     """
-    def __init__(self, id: str, func: Callable[..., Any], fixed_params: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, node_id: str, func: Callable[..., Any], \
+                 fixed_params: Optional[Dict[str, Any]] = None) -> None:
         """Initializes a Node."""
-        self.id: str = id
+        self.id: str = node_id
         self.func: Callable[..., Any] = func
         self.fixed_params: Dict[str, Any] = fixed_params if fixed_params is not None else {}
         self.output: Any = None
@@ -37,7 +40,7 @@ class Node:
         self.output = None
         self.input_hash_last_exec = None
 
-    def execute(self, inputs: Dict[str, Any] = {}) -> Any:
+    def execute(self, inputs: Union[None, Dict[str, Any]] = None) -> Any:
         """
         Executes the node's function with the given inputs.
 
@@ -52,10 +55,16 @@ class Node:
             Exception: Propagates any exception that occurs during the function's
                 execution, after printing debug information.
         """
+        if inputs is None:
+            inputs = {}
+
         to_hash: List[Any] = []
         for v in inputs.values():
             # hash(-1) == hash(-2) in python
-            to_hash.append(v) if type(v) is not int or v != -1 else to_hash.append(v + 1e-16)
+            if not isinstance(v, (int, float)) or v != -1:
+                to_hash.append(v)
+            else:
+                to_hash.append(v + 1e-16)
         for i, e in enumerate(to_hash):
             # to avoid import numpy only for this test
             if e.__class__.__name__ == "ndarray":
@@ -65,12 +74,16 @@ class Node:
         except TypeError:
             current_input_hash = None
         try:
-            if self.output is None or current_input_hash is None or current_input_hash != self.input_hash_last_exec:
+            if self.output is None or \
+               current_input_hash is None or \
+               current_input_hash != self.input_hash_last_exec:
                 self.output = self.func(**{**self.fixed_params, **inputs})
                 self.input_hash_last_exec = current_input_hash
             return self.output
         except Exception as e:
-            raise Exception(f"Error in executing node {self.id}: {e}\nNode fixed parameters: {self.fixed_params}\nNode inputs: {inputs}")
+            raise RuntimeError(f"Error in executing node {self.id}: {e}\n\
+                            Node fixed parameters: {self.fixed_params}\n\
+                            Node inputs: {inputs}") from e
 
     def get_fixed_params(self) -> Dict[str, Any]:
         """Returns the dictionary of fixed parameters."""
@@ -85,7 +98,7 @@ class Node:
         """
         if not isinstance(fixed_params, dict):
             raise ValueError("Fixed parameters must be a dictionary.")
-            
+
         for key, value in fixed_params.items():
             if not isinstance(key, str):
                 raise ValueError(f"Key '{key}' is not a string.")
@@ -129,13 +142,15 @@ class NodeIf(Node):
         true_pipeline (Pipeline): The pipeline to execute if the condition is True.
         false_pipeline (Pipeline): The pipeline to execute if the condition is False.
     """
-    def __init__(self, id: str, condition_func: Callable[..., bool], true_pipeline: Pipeline, false_pipeline: Pipeline, fixed_params: Optional[Dict[str, Any]] = None) -> None:
-        super().__init__(id, condition_func, fixed_params=fixed_params)
+    def __init__(self, node_id: str, condition_func: Callable[..., bool], \
+                 true_pipeline: Pipeline, false_pipeline: Pipeline, \
+                 fixed_params: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(node_id, condition_func, fixed_params=fixed_params)
         self.true_pipeline: Pipeline = true_pipeline
         self.false_pipeline: Pipeline = false_pipeline
         self.skip_failed_loop: bool = False
         self.debug: bool = False
-    
+
     def set_run_params(self, skip_failed_loop: bool = False, debug: bool = False) -> None:
         """
         Sets the run parameters for the sub-pipelines.
@@ -150,7 +165,8 @@ class NodeIf(Node):
         self.skip_failed_loop = skip_failed_loop
         self.debug = debug
 
-    def execute(self, inputs: Dict[str, Any] = {}, optimize_memory: bool = False) -> Any:
+    def execute(self, inputs: Union[None, Dict[str, Any]] = None, \
+                optimize_memory: bool = False) -> Any:
         """
         Evaluates the condition and executes the corresponding sub-pipeline.
 
@@ -166,6 +182,9 @@ class NodeIf(Node):
         Returns:
             The output of the final node of the executed sub-pipeline.
         """
+        if inputs is None:
+            inputs = {}
+
         condition_inputs: Dict[str, Any] = {}
         for k in inputs:
             if k.startswith("condition_func:"):
@@ -173,17 +192,17 @@ class NodeIf(Node):
         for k in condition_inputs:
             del inputs["condition_func:"+k]
         if self.func(**self.fixed_params, **condition_inputs):
-            id, hist, _ = self.true_pipeline.run(run_params=inputs, 
-                                                 optimize_memory= optimize_memory, 
-                                                 skip_failed_loop=self.skip_failed_loop, 
-                                                 debug=self.debug)
+            node_id, hist, _ = self.true_pipeline.run(inputs,
+                                                 optimize_memory,
+                                                 self.skip_failed_loop,
+                                                 self.debug)
         else:
-            id, hist, _ = self.false_pipeline.run(run_params=inputs, 
-                                                  optimize_memory=optimize_memory, 
-                                                  skip_failed_loop=self.skip_failed_loop, 
-                                                  debug=self.debug)
+            node_id, hist, _ = self.false_pipeline.run(inputs,
+                                                  optimize_memory,
+                                                  self.skip_failed_loop,
+                                                  self.debug)
         self.output = id, hist
-        return hist[id]
+        return hist[node_id]
 
     def get_fixed_params(self) -> Dict[str, Any]:
         """
@@ -197,8 +216,10 @@ class NodeIf(Node):
         # Returns the fixed parameters of the IF node: fixed_params + those of the pipelines
         true_fixed_params: Dict[str, Any] = self.true_pipeline.get_fixed_params()
         false_fixed_params: Dict[str, Any] = self.false_pipeline.get_fixed_params()
-        return {**self.fixed_params, "true_pipeline": true_fixed_params, "false_pipeline": false_fixed_params}
-    
+        return {**self.fixed_params,
+                "true_pipeline": true_fixed_params, 
+                "false_pipeline": false_fixed_params}
+
     def set_fixed_params(self, fixed_params: Dict[str, Any]) -> None:
         """
         Sets the fixed parameters for the NodeIf and its sub-pipelines.
@@ -215,7 +236,7 @@ class NodeIf(Node):
                     raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
                 self.fixed_params[key] = value
         self.clear_memory()
-    
+
     def set_fixed_param(self, key: str, value: Any) -> None:
         """
         Sets a single fixed parameter on the NodeIf or its sub-pipelines.
@@ -242,12 +263,13 @@ class NodeFor(Node):
     Attributes:
         loop_pipeline (Pipeline): The pipeline to execute at each iteration.
     """
-    def __init__(self, id: str, loop_pipeline: Pipeline, fixed_params: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, node_id: str, loop_pipeline: Pipeline, \
+                 fixed_params: Optional[Dict[str, Any]] = None) -> None:
         """
         Initializes a NodeFor.
 
         Args:
-            id (str): The unique identifier for the node.
+            node_id (str): The unique identifier for the node.
             loop_pipeline (Pipeline): The pipeline to execute in a loop.
             fixed_params (dict, optional): Fixed parameters for this node.
         """
@@ -255,7 +277,7 @@ class NodeFor(Node):
             fixed_params = {}
         elif 'iterations' not in fixed_params or len(fixed_params) >= 2:
             raise ValueError("Only 'iterations' is allowed as a fixed parameter.")
-        super().__init__(id, func=lambda **kwargs: kwargs, fixed_params=fixed_params)
+        super().__init__(node_id, func=lambda **kwargs: kwargs, fixed_params=fixed_params)
         self.loop_pipeline: Pipeline = loop_pipeline
         self.skip_failed_loop: bool = False
         self.debug: bool = False
@@ -274,7 +296,8 @@ class NodeFor(Node):
         self.skip_failed_loop = skip_failed_loop
         self.debug = debug
 
-    def execute(self, inputs: Dict[str, Any] = {}, optimize_memory: bool = False) -> Any:
+    def execute(self, inputs: Union[None, Dict[str, Any]] = None, \
+                optimize_memory: bool = False) -> Any:
         """
         Executes the loop. It requires an 'iterations' input for the number of loops,
         and a 'loop_var' input for the initial value that will be passed from one
@@ -288,10 +311,14 @@ class NodeFor(Node):
         Returns:
             The output of the final iteration.
         """
+        if inputs is None:
+            inputs = {}
+
         iterations: Optional[int] = inputs.get('iterations', self.fixed_params.get('iterations'))
         if not iterations:
-            raise ValueError("NodeFor requires an 'iterations' input in 'inputs' or in 'fixed_params'.")
-        
+            raise ValueError("NodeFor requires an 'iterations' input in \
+                             'inputs' or in 'fixed_params'.")
+
         if 'loop_var' not in inputs:
             raise ValueError("NodeFor requires a 'loop_var' input for the initial value.")
 
@@ -312,28 +339,19 @@ class NodeFor(Node):
                     print(f"Error in the for node {self.id} at iteration {i+1}/{iterations}: {e}")
                     continue
                 raise e
-        
+
         return inputs['loop_var']
 
     def get_fixed_params(self) -> Dict[str, Any]:
         """
         Gets the fixed parameters of the NodeFor and its sub-pipeline.
         """
-        params: Dict[str, Any] = {**self.fixed_params, "loop_pipeline": self.loop_pipeline.get_fixed_params()}
-        # The 'iterations' attribute is not directly part of fixed_params in the base Node
-        # It's handled specially in NodeFor's __init__ and set_fixed_params
-        # So, we need to ensure it's correctly represented here if it exists.
-        if hasattr(self, 'iterations'):
-            params['iterations'] = self.iterations
-        return params
-    
+        return {**self.fixed_params, "loop_pipeline": self.loop_pipeline.get_fixed_params()}
+
     def set_fixed_params(self, fixed_params: Dict[str, Any]) -> None:
         """
         Sets the fixed parameters for the NodeFor and its sub-pipeline.
         """
-        if 'iterations' in fixed_params:
-            self.iterations: int = int(fixed_params.pop('iterations'))
-
         for key, value in fixed_params.items():
             if key == "loop_pipeline":
                 self.loop_pipeline.set_fixed_params(value)
@@ -342,14 +360,12 @@ class NodeFor(Node):
                     raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
                 self.fixed_params[key] = value
         self.clear_memory()
-    
+
     def set_fixed_param(self, key: str, value: Any) -> None:
         """
         Sets a single fixed parameter on the NodeFor or its sub-pipeline.
         """
-        if key == 'iterations':
-            self.iterations: int = int(value)
-        elif key == "loop_pipeline":
+        if key == "loop_pipeline":
             self.loop_pipeline.set_fixed_params(value)
         else:
             if key not in self.fixed_params:
@@ -367,17 +383,18 @@ class NodeWhile(Node):
     Attributes:
         loop_pipeline (Pipeline): The pipeline to execute at each iteration.
     """
-    def __init__(self, id: str, condition_func: Callable[..., bool], loop_pipeline: Pipeline, fixed_params: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, node_id: str, condition_func: Callable[..., bool], \
+                 loop_pipeline: Pipeline, fixed_params: Optional[Dict[str, Any]] = None) -> None:
         """
         Initializes a NodeWhile.
 
         Args:
-            id (str): The unique identifier for the node.
+            node_id (str): The unique identifier for the node.
             condition_func (callable): The function that returns a boolean value.
             loop_pipeline (Pipeline): The pipeline to execute in a loop.
             fixed_params (dict, optional): Fixed parameters for this node.
         """
-        super().__init__(id, func=condition_func , fixed_params=fixed_params)
+        super().__init__(node_id, func=condition_func , fixed_params=fixed_params)
         self.loop_pipeline: Pipeline = loop_pipeline
         self.skip_failed_loop: bool = False
         self.debug: bool = False
@@ -396,13 +413,15 @@ class NodeWhile(Node):
         self.skip_failed_loop = skip_failed_loop
         self.debug = debug
 
-    def execute(self, inputs: Dict[str, Any] = {}, optimize_memory: bool = False) -> Any:
+    def execute(self, inputs: Union[None, Dict[str, Any]] = None, \
+                optimize_memory: bool = False) -> Any:
         """
         Executes the while loop. It requires a 'loop_var' input for the initial value
         that will be passed from one iteration to the next. The loop continues as
         long as the `condition_func` returns True.
         The `condition_func`parameters are prefixed with "condition_func:" in inputs.
-        A `max_iterations` parameter can be added to prevent infinite loops (need the `condition_func:`prefix if setted in inputs).
+        A `max_iterations` parameter can be added to prevent infinite loops 
+        (need the `condition_func:`prefix if setted in inputs).
 
         Args:
             inputs (dict): Must contain 'loop_var' (any). Can also contain
@@ -413,6 +432,9 @@ class NodeWhile(Node):
         Returns:
             The output of the final iteration.
         """
+        if inputs is None:
+            inputs = {}
+
         condition_inputs: Dict[str, Any] = {}
         for k in inputs:
             if k.startswith("condition_func:"):
@@ -425,14 +447,15 @@ class NodeWhile(Node):
 
         if 'loop_var' not in inputs:
             raise ValueError("NodeWhile requires a 'loop_var' input for the initial value.")
-        max_iterations: Union[int, float] = inputs.get('condition_func:max_iterations', self.fixed_params.get('max_iterations', float('inf')))
-        
+        max_iterations: Union[int, float] = inputs.get('condition_func:max_iterations', \
+                                            self.fixed_params.get('max_iterations', float('inf')))
+
         i: int = 0
         while self.func(**condition_inputs, loop_var=inputs['loop_var']) and i < max_iterations:
             i += 1
             if self.debug:
                 print(f"\rExecuting node: {self.id} iteration {i}")
-                
+
             try:
                 last_node_id: str
                 hist: Dict[str, Any]
@@ -448,28 +471,19 @@ class NodeWhile(Node):
                     print(f"Error in the while node {self.id} at iteration {i+1}: {e}")
                     continue
                 raise e
-        
+
         return inputs['loop_var']
 
     def get_fixed_params(self) -> Dict[str, Any]:
         """
         Gets the fixed parameters of the NodeFor and its sub-pipeline.
         """
-        params: Dict[str, Any] = {**self.fixed_params, "loop_pipeline": self.loop_pipeline.get_fixed_params()}
-        # The 'iterations' attribute is not directly part of fixed_params in the base Node
-        # It's handled specially in NodeFor's __init__ and set_fixed_params
-        # So, we need to ensure it's correctly represented here if it exists.
-        if hasattr(self, 'iterations'):
-            params['iterations'] = self.iterations
-        return params
-    
+        return {**self.fixed_params, "loop_pipeline": self.loop_pipeline.get_fixed_params()}
+
     def set_fixed_params(self, fixed_params: Dict[str, Any]) -> None:
         """
         Sets the fixed parameters for the NodeFor and its sub-pipeline.
         """
-        if 'iterations' in fixed_params:
-            self.iterations: int = int(fixed_params.pop('iterations'))
-
         for key, value in fixed_params.items():
             if key == "loop_pipeline":
                 self.loop_pipeline.set_fixed_params(value)
@@ -478,14 +492,12 @@ class NodeWhile(Node):
                     raise ValueError(f"Key '{key}' is not a fixed parameter of node '{self.id}'.")
                 self.fixed_params[key] = value
         self.clear_memory()
-    
+
     def set_fixed_param(self, key: str, value: Any) -> None:
         """
         Sets a single fixed parameter on the NodeFor or its sub-pipeline.
         """
-        if key == 'iterations':
-            self.iterations: int = int(value)
-        elif key == "loop_pipeline":
+        if key == "loop_pipeline":
             self.loop_pipeline.set_fixed_params(value)
         else:
             if key not in self.fixed_params:
