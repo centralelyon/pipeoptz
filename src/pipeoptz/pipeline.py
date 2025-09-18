@@ -432,8 +432,9 @@ class Pipeline:
             elif add_optz or not node_id.startswith("[optz]"):
                 func_module = node.func.__module__
                 func_name = node.func.__name__
+                func_label = func_name
                 if func_module != '__main__':
-                    func_label = f"{func_module}.{func_name}"
+                    func_label = func_module + "." + func_label
                 shape = "doubleoctagon" if is_last and _prefix == "" else "box"
                 if show_function:
                     dot_lines.append(f'    "{full_id}" [shape={shape}, label=< <B>{node_id}</B> '+
