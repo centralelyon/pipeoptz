@@ -29,19 +29,19 @@ bibliography: paper.bib
 
 # Summary
 
-**PipeOptz** is a Python library for building, visualizing, and optimizing processing pipelines. It allows users to define a series of operations as a DAG (Directed Acyclic Graph) and automatically tune the parameters of those operations to achieve a desired outcome. The library is designed to be suitable for a wide range of applications, particularly in image processing where workflows can be complex and require parameter tuning.
+**PipeOptz** is a Python library for the building, visualizing, and fine-tuning of processing pipelines. It enables users to define a series of operations as a DAG (Directed Acyclic Graph) which parameters can then be optimized to achieve a desired outcome. The library is designed to be suitable for a wide range of applications, and is particularly suited for image processing where workflows can be dense and often require parameter tuning.
 
 # Statement of need
 
-In many scientific and engineering domains, complex data processing workflows are common. These workflows, or pipelines, often consist of multiple steps, each with its own set of parameters and outputs. Finding the optimal set of parameters for a given task can be a tedious and time-consuming process, often requiring manual trial and error. This is especially true in fields like image processing, where a sequence of filters and transformations is applied to an image, e.g., to find the best thresholding parameters. Pipelines also have numerous benefits, among them they can be visualized and re-produced, contrary to deep learning systems that often are black box.
+In many scientific and engineering domains, complex data processing workflows are common. These workflows, i.e. pipelines, often consist of multiple steps, each with its own set of parameters and outputs. Finding the optimal set of parameters, and their individual influence, for a given task can be a tedious and time-consuming process which is often solved through manual trial and error. This is especially true in fields like image processing, where a sequence of filters and transformations is applied to an image, e.g., to find the best thresholding parameters. As opposed standard deep learning systems, pipelines, and their parameters have also the benefit to be more interpretable, through visualizations, and more easily reproducible.
 
-Existing tools for pipeline management often fall into two categories: heavy-weight workflow orchestration frameworks (e.g., Airflow, Prefect) that are designed for large-scale data engineering tasks, or more specialized machine learning pipeline libraries (e.g., Scikit-learn pipelines) that are focused on linear sequences of operations. From our experience, we found a need for a lightweight, flexible, and Pythonic library that allows for the easy creation, visualization, and optimization of complex, non-linear pipelines directly within a Python script.
+Existing tools for pipeline management often fall into two categories: heavy-weight workflow orchestration frameworks (e.g., Airflow, Prefect) that are designed for large-scale data engineering tasks, or more specialized machine learning pipeline libraries (e.g., Scikit-learn pipelines) that are focused on linear sequences of operations. From our experience, we found a need for a lightweight, flexible, and Pythonic library that is suited for the easy creation, visualization, and optimization of, non-linear pipelines directly within a Python script.
 
-`PipeOptz` addresses this need by providing an API for defining pipelines as Directed Acyclic Graphs (DAGs), with support for conditional branching and looping. It integrates parameter optimization as a core feature, allowing users to define a search space for their pipeline's parameters and use various optimization algorithms to find the best configuration.
+`PipeOptz` addresses this need by providing an API for defining pipelines as Directed Acyclic Graphs (DAGs), with support for conditional branching and looping. In this graph, each node is a user-defined function in python, to ensure expressivity, and application to various domains. It integrates parameter optimization as a core feature, enabling users to define a search space for their pipeline's parameters and use various baseline optimization algorithms to find the best configuration.
 
 # Functionality
 
-`PipeOptz` is built around a few core concepts:
+`PipeOptz` is built around the following core concepts:
 
 -  **`Node`**: The basic building block of a pipeline. A `Node` wraps a single Python function and its parameters. We also provide more complex nodes for control flow:
     -   `NodeIf`: for conditional branching (if/else).
