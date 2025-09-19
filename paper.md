@@ -20,11 +20,11 @@ bibliography: paper.bib
 
 # Summary
 
-**PipeOptz** is a Python library for building, visualizing, and optimizing processing pipelines. It allows users to define a series of operations as a graph, manage the flow of data, and automatically tune the parameters of those operations to achieve a desired outcome. The library is designed to be suitable for a wide range of applications, particularly in image processing workflows can be complex and require parameter tuning.
+**PipeOptz** is a Python library for building, visualizing, and optimizing processing pipelines. It allows users to define a series of operations as a graph and automatically tune the parameters of those operations to achieve a desired outcome. The library is designed to be suitable for a wide range of applications, particularly in image processing where workflows can be complex and require parameter tuning.
 
-# Statement of Need
+# Statement of need
 
-In many scientific and engineering domains, complex data processing workflows are common. These workflows, or pipelines, often consist of multiple steps, each with its own set of parameters. Finding the optimal set of parameters for a given task can be a tedious and time-consuming process, often requiring manual trial and error. This is especially true in fields like image processing, where a sequence of filters and transformations is applied to an image, and the quality of the final output is highly sensitive to the parameters of each step.
+In many scientific and engineering domains, complex data processing workflows are common. These workflows, or pipelines, often consist of multiple steps, each with its own set of parameters. Finding the optimal set of parameters for a given task can be a tedious and time-consuming process, often requiring manual trial and error. This is especially true in fields like image processing, where a sequence of filters and transformations is applied to an image. And the advantage of pipelines over neural networks is the absence of the black box effect. The primary consequence of this explainability is a reduction in the amount of data required for adequate optimization.
 
 Existing tools for pipeline management often fall into two categories: heavy-weight workflow orchestration frameworks (e.g., Airflow, Prefect) that are designed for large-scale data engineering tasks, or more specialized machine learning pipeline libraries (e.g., Scikit-learn pipelines) that are focused on linear sequences of operations. There is a need for a lightweight, flexible, and Pythonic library that allows for the easy creation, visualization, and optimization of complex, non-linear pipelines directly within a Python script.
 
