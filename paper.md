@@ -5,28 +5,37 @@ tags:
   - Pipeline
   - Optimization
 authors:
-  - name: Nicolas PENGOV
-    orcid: # TODO: Add your ORCID here
-    affiliation: École Centrale de Lyon
-  - name: Romain Vuillemot
-    orcid: # TODO: Add your ORCID here
-    affiliation: École Centrale de Lyon
+  - name: Nicolas Pengov
+    orcid: 0000-0000-0000-0000 # TODO: Add your ORCID here
+    equal-contrib: false
+    affiliation: "1, 2" 
   - name: Théo Jaunet
-    orcid: # TODO: Add your ORCID here
-    affiliation: École Centrale de Lyon
+    orcid: 0000-0000-0000-0000 # TODO: Add your ORCID here
+    equal-contrib: false
+    affiliation: "1, 2" 
+  - name: Romain Vuillemot
+    orcid: 0000-0003-1447-6926
+    equal-contrib: false
+    affiliation: "1, 2" 
+affiliations:
+ - name: Ecole Centrale de Lyon, Lyon, France
+   index: 1
+   ror: 00hx57361
+ - name: LIRIS UMR 5205, Villeurbanne, France
+   index: 2
 date: 18 September 2025
 bibliography: paper.bib
 ---
 
 # Summary
 
-**PipeOptz** is a Python library for building, visualizing, and optimizing processing pipelines. It allows users to define a series of operations as a graph and automatically tune the parameters of those operations to achieve a desired outcome. The library is designed to be suitable for a wide range of applications, particularly in image processing where workflows can be complex and require parameter tuning.
+**PipeOptz** is a Python library for building, visualizing, and optimizing processing pipelines. It allows users to define a series of operations as a DAG (Directed Acyclic Graph) and automatically tune the parameters of those operations to achieve a desired outcome. The library is designed to be suitable for a wide range of applications, particularly in image processing where workflows can be complex and require parameter tuning.
 
 # Statement of need
 
-In many scientific and engineering domains, complex data processing workflows are common. These workflows, or pipelines, often consist of multiple steps, each with its own set of parameters. Finding the optimal set of parameters for a given task can be a tedious and time-consuming process, often requiring manual trial and error. This is especially true in fields like image processing, where a sequence of filters and transformations is applied to an image. And the advantage of pipelines over neural networks is the absence of the black box effect. The primary consequence of this explainability is a reduction in the amount of data required for adequate optimization.
+In many scientific and engineering domains, complex data processing workflows are common. These workflows, or pipelines, often consist of multiple steps, each with its own set of parameters and outputs. Finding the optimal set of parameters for a given task can be a tedious and time-consuming process, often requiring manual trial and error. This is especially true in fields like image processing, where a sequence of filters and transformations is applied to an image, e.g., to find the best thresholding parameters. Pipelines also have numerous benefits, among them they can be visualized and re-produced, contrary to deep learning systems that often are black box.
 
-Existing tools for pipeline management often fall into two categories: heavy-weight workflow orchestration frameworks (e.g., Airflow, Prefect) that are designed for large-scale data engineering tasks, or more specialized machine learning pipeline libraries (e.g., Scikit-learn pipelines) that are focused on linear sequences of operations. There is a need for a lightweight, flexible, and Pythonic library that allows for the easy creation, visualization, and optimization of complex, non-linear pipelines directly within a Python script.
+Existing tools for pipeline management often fall into two categories: heavy-weight workflow orchestration frameworks (e.g., Airflow, Prefect) that are designed for large-scale data engineering tasks, or more specialized machine learning pipeline libraries (e.g., Scikit-learn pipelines) that are focused on linear sequences of operations. From our experience, we found a need for a lightweight, flexible, and Pythonic library that allows for the easy creation, visualization, and optimization of complex, non-linear pipelines directly within a Python script.
 
 `PipeOptz` addresses this need by providing an API for defining pipelines as Directed Acyclic Graphs (DAGs), with support for conditional branching and looping. It integrates parameter optimization as a core feature, allowing users to define a search space for their pipeline's parameters and use various optimization algorithms to find the best configuration.
 
@@ -34,21 +43,21 @@ Existing tools for pipeline management often fall into two categories: heavy-wei
 
 `PipeOptz` is built around a few core concepts:
 
--   **`Node`**: The basic building block of a pipeline. A `Node` wraps a single Python function and its parameters. We also provide more complex nodes for control flow:
+-  **`Node`**: The basic building block of a pipeline. A `Node` wraps a single Python function and its parameters. We also provide more complex nodes for control flow:
     -   `NodeIf`: for conditional branching (if/else).
     -   `NodeFor`: for 'for' loops.
     -   `NodeWhile`: for 'while' loops.
 
--   **`Pipeline`**: A `Pipeline` holds the entire workflow. Nodes are added to the pipeline with their dependencies, forming a DAG. The pipeline manages the execution order.
+-   **`Pipeline`**: A `Pipeline` holds the entire workflow. Nodes are added to the pipeline with their dependencies, forming a DAG. The pipeline manages the execution by following a topological order.
 
--   **`Parameter`**: A `Parameter` defines the search space for a value to be optimized. `PipeOptz` provides several types of parameters:
+-   **`Parameter`**: A `Parameter` defines the type and search space for a value to be optimized. `PipeOptz` provides several types of parameters:
     -   `IntParameter`: for integers within a given range.
     -   `FloatParameter`: for floating-point numbers within a given range.
     -   `ChoiceParameter`: for selecting a value from a list of choices.
     -   `MultiChoiceParameter`: for selecting multiple values from a list of choices.
-    -   `BoolParameter`: for boolean values.
+    -   `BoolParameter`: for boolean values (`True` or `False`).
 
--   **`PipelineOptimizer`**: The engine that tunes the pipeline. It takes a pipeline, a set of parameters to optimize, and a loss function to minimize. It uses various metaheuristic algorithms to find the best parameter values, including:
+-   **`PipelineOptimizer`**: The engine that tunes the pipeline. It takes the following as input: a pipeline, a set of parameters to optimize, and a loss function to minimize. It uses various metaheuristic algorithms to find the best parameter values, including:
     -   Grid Search (GS)
     -   Bayesian Optimization (BO)
     -   Ant Colony Optimization (ACO)
@@ -104,7 +113,7 @@ print(f"Final loss: {loss_log[-1]:.4f}")
 
 This script will search for the optimal values for `X.x` and `Y.y` that minimize the final output of the pipeline. The expected output will show the best parameters found, which should be close to `{'X.x': 3.0, 'Y.y': -1.0}`, and a final loss close to 0.
 
-We can visualize the pipeline using:
+We can visualize the pipeline using (\autoref{fig:example}):
 
 ```python
 from PIL import Image
@@ -113,12 +122,13 @@ im = Image.open("pipeline.png")
 im.show()
 ```
 
-<div align="center">
-  <img src="https://github.com/centralelyon/pipeoptz/blob/main/examples/opti/opti.png?raw=true" width="250"/>
-  <figcaption>Figure 1: Visualization of the example pipeline.</figcaption>
-</div>
+![Visualization of the example pipeline.\label{fig:example}](examples/opti/opti.png?raw=true){ width=50% }.
+
+\cite{engproc2023059238}
 
 # Citations
+
+
 
 # Acknowledgements
 
