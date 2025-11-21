@@ -20,7 +20,7 @@ authors:
 affiliations:
  - name: Ecole Centrale de Lyon, France
    index: 1
-   ror: 00hx57361
+   ror: 05s6rge65
  - name: LIRIS CNRS UMR 5205, France
    index: 2
 date: 18 November 2025
@@ -33,7 +33,7 @@ bibliography: paper.bib
 
 # Statement of need
 
-In many scientific and engineering domains, complex data processing workflows are common. These workflows, i.e. pipelines, often consist of multiple steps, each with its own set of parameters and outputs. Finding the optimal set of parameters, and their individual influence, for a given task can be a tedious and time-consuming process which is often solved through manual trial and error. This is especially true in fields like image processing, where a sequence of filters and transformations is applied to an image, e.g., to find the best thresholding parameters. As opposed standard deep learning systems, pipelines, and their parameters have also the benefit to be more interpretable, through visualizations, and more easily reproducible.
+In many scientific and engineering domains, complex data processing workflows are common. These workflows, i.e., pipelines, often consist of multiple steps, each with its own set of parameters and outputs. Finding the optimal set of parameters, and their individual influence, for a given task can be a tedious and time-consuming process which is often solved through manual trial and error. This is especially true in fields like image processing, where a sequence of filters and transformations is applied to an image, e.g., to find the best thresholding parameters. As opposed standard deep learning systems, pipelines, and their parameters have also the benefit to be more interpretable, through visualizations, and more easily reproducible.
 
 Existing tools for pipeline management often fall into two categories: heavy-weight workflow orchestration frameworks (e.g., Airflow, Prefect) that are designed for large-scale data engineering tasks, or more specialized machine learning pipeline libraries (e.g., Scikit-learn pipelines) that are focused on linear sequences of operations. From our experience, we found a need for a lightweight, flexible, and Pythonic library that is suited for the easy creation, visualization, and optimization of, non-linear pipelines directly within a Python script.
 
@@ -76,7 +76,7 @@ The library also provides features for:
 
 # Example Usage
 
-The following example demonstrates how to use `PipeOptz` to find the minimum of a simple function `f(x, y) = (x - 3)^2 + (y + 1)^2` using Bayesian Optimization. The pipeline is constructed from multiple nodes to showcase the graph-based approach.
+The following example demonstrates how to use `PipeOptz` to find the minimum of a simple function $f(x, y) = (x - 3)^2 + (y + 1)^2$ using Bayesian Optimization. The pipeline is constructed from multiple nodes to showcase the graph-based approach.
 
 ```python
 from pipeoptz import Pipeline, Node, FloatParameter, PipelineOptimizer
@@ -127,8 +127,6 @@ im.show()
 # Citations
 
 `PipeOptz` complements lightweight helpers designed for algorithm evaluation [@Küderle2023], and its optimization engine builds on Bayesian Optimization techniques [@snoek2012practicalbayesianoptimizationmachine] alongside the broader family of metaheuristics surveyed in @engproc2023059238.
-
-
 
 # Acknowledgements
 
