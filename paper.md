@@ -10,7 +10,7 @@ authors:
     equal-contrib: false
     affiliation: "1, 2" 
   - name: Théo Jaunet
-    orcid: 0000-0000-0000-0000 # TODO: Add your ORCID here
+    orcid: 0000-0003-3081-5123 # TODO: Add your ORCID here
     equal-contrib: false
     affiliation: "1, 2" 
   - name: Romain Vuillemot
@@ -18,12 +18,12 @@ authors:
     equal-contrib: false
     affiliation: "1, 2" 
 affiliations:
- - name: Ecole Centrale de Lyon, Lyon, France
+ - name: Ecole Centrale de Lyon, France
    index: 1
    ror: 00hx57361
- - name: LIRIS UMR 5205, Villeurbanne, France
+ - name: LIRIS CNRS UMR 5205, France
    index: 2
-date: 18 September 2025
+date: 18 November 2025
 bibliography: paper.bib
 ---
 
@@ -113,7 +113,7 @@ print(f"Final loss: {loss_log[-1]:.4f}")
 
 This script will search for the optimal values for `X.x` and `Y.y` that minimize the final output of the pipeline. The expected output will show the best parameters found, which should be close to `{'X.x': 3.0, 'Y.y': -1.0}`, and a final loss close to 0.
 
-We can visualize the pipeline using (\autoref{fig:example}):
+We can visualize the pipeline using Figure \ref{fig:example}:
 
 ```python
 from PIL import Image
@@ -122,11 +122,11 @@ im = Image.open("pipeline.png")
 im.show()
 ```
 
-![Visualization of the example pipeline.\label{fig:example}](examples/opti/opti.png?raw=true){ width=50% }.
-
-\cite{engproc2023059238}
+![Visualization of the example pipeline.](examples/opti/opti.png?raw=true){#fig:example width=50%}
 
 # Citations
+
+`PipeOptz` complements lightweight helpers designed for algorithm evaluation [@Küderle2023], and its optimization engine builds on Bayesian Optimization techniques [@snoek2012practicalbayesianoptimizationmachine] alongside the broader family of metaheuristics surveyed in @engproc2023059238.
 
 
 
