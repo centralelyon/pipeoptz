@@ -6,7 +6,7 @@ tags:
   - Optimization
 authors:
   - name: Nicolas Pengov
-    orcid: 0000-0000-0000-0000 # TODO: Add your ORCID here
+    orcid: 0009-0003-2615-4016 # TODO: Add your ORCID here
     equal-contrib: false
     affiliation: "1, 2" 
   - name: Théo Jaunet
