@@ -33,9 +33,9 @@ bibliography: paper.bib
 
 # Statement of need
 
-In many scientific and engineering domains, complex data processing workflows are common. These workflows, i.e., pipelines, often consist of multiple steps, each with its own set of parameters and outputs. Finding the optimal set of parameters, and their individual influence, for a given task can be a tedious and time-consuming process which is often solved through manual trial and error. This is especially true in fields like image processing, where a sequence of filters and transformations is applied to an image, e.g., to find the best thresholding parameters. As opposed standard deep learning systems, pipelines, and their parameters have also the benefit to be more interpretable, through visualizations, and more easily reproducible.
+In many scientific and engineering domains, complex data processing workflows are common. These workflows, i.e., pipelines, often consist of multiple steps, each with its own set of parameters and outputs. Finding the optimal set of parameters, and their individual influence, for a given task can be a tedious and time-consuming process which is often solved through manual trial and error. This is especially true in fields like image processing [@vanderwalt2014scikitimage], where a sequence of filters and transformations is applied to an image, e.g., to find the best thresholding parameters. As opposed standard deep learning systems, pipelines, and their parameters have also the benefit to be more interpretable, through visualizations, and more easily reproducible.
 
-Existing tools for pipeline management often fall into two categories: heavy-weight workflow orchestration frameworks (e.g., Airflow, Prefect) that are designed for large-scale data engineering tasks, or more specialized machine learning pipeline libraries (e.g., Scikit-learn pipelines) that are focused on linear sequences of operations. From our experience, we found a need for a lightweight, flexible, and Pythonic library that is suited for the easy creation, visualization, and optimization of, non-linear pipelines directly within a Python script.
+Existing tools for pipeline management often fall into two categories: heavy-weight workflow orchestration frameworks (e.g., Airflow [@airflow], Prefect [@prefect]) that are designed for large-scale data engineering tasks, or more specialized machine learning pipeline libraries (e.g., Scikit-learn pipelines [@pedregosa2011scikit]) that are focused on linear sequences of operations. From our experience, we found a need for a lightweight, flexible, and Pythonic library that is suited for the easy creation, visualization, and optimization of, non-linear pipelines directly within a Python script.
 
 `PipeOptz` addresses this need by providing an API for defining pipelines as Directed Acyclic Graphs (DAGs), with support for conditional branching and looping. In this graph, each node is a user-defined function in python, to ensure expressivity, and application to various domains. It integrates parameter optimization as a core feature, enabling users to define a search space for their pipeline's parameters and use various baseline optimization algorithms to find the best configuration.
 
@@ -48,7 +48,7 @@ Existing tools for pipeline management often fall into two categories: heavy-wei
     -   `NodeFor`: for 'for' loops.
     -   `NodeWhile`: for 'while' loops.
 
--   **`Pipeline`**: A `Pipeline` holds the entire workflow. Nodes are added to the pipeline with their dependencies, forming a DAG. The pipeline manages the execution by following a topological order.
+-   **`Pipeline`**: A `Pipeline` holds the entire workflow. Nodes are added to the pipeline with their dependencies, forming a DAG. The pipeline manages the execution by following a topological order [@kahn1962topsort].
 
 -   **`Parameter`**: A `Parameter` defines the type and search space for a value to be optimized. `PipeOptz` provides several types of parameters:
     -   `IntParameter`: for integers within a given range.
@@ -59,15 +59,15 @@ Existing tools for pipeline management often fall into two categories: heavy-wei
 
 -   **`PipelineOptimizer`**: The engine that tunes the pipeline. It takes the following as input: a pipeline, a set of parameters to optimize, and a loss function to minimize. It uses various metaheuristic algorithms to find the best parameter values, including:
     -   Grid Search (GS)
-    -   Bayesian Optimization (BO)
-    -   Ant Colony Optimization (ACO)
-    -   Simulated Annealing (SA)
-    -   Particle Swarm Optimization (PSO)
-    -   Genetic Algorithm (GA)
+    -   Bayesian Optimization (BO) [@snoek2012practicalbayesianoptimizationmachine; @shahriari2016bayesianoptimization]
+    -   Ant Colony Optimization (ACO) [@dorigo1997antcolony]
+    -   Simulated Annealing (SA) [@kirkpatrick1983simulatedannealing]
+    -   Particle Swarm Optimization (PSO) [@kennedy1995pso]
+    -   Genetic Algorithm (GA) [@holland1975adaptation]
 
 The library also provides features for:
 
--   **Visualization**: Pipelines can be visualized as graphs using the `to_dot` and `to_image` methods, which generate Graphviz dot files and PNG images.
+-   **Visualization**: Pipelines can be visualized as graphs using the `to_dot` and `to_image` methods, which generate Graphviz dot files and PNG images [@gansner2000graphviz].
 -   **Serialization**: Pipelines can be saved to and loaded from JSON files using the `to_json` and `from_json` methods, allowing for easy sharing and reuse of workflows.
 
 # Audience
@@ -126,7 +126,7 @@ im.show()
 
 # Citations
 
-`PipeOptz` complements lightweight helpers designed for algorithm evaluation [@Küderle2023], and its optimization engine builds on Bayesian Optimization techniques [@snoek2012practicalbayesianoptimizationmachine] alongside the broader family of metaheuristics surveyed in @engproc2023059238.
+`PipeOptz` complements lightweight helpers designed for algorithm evaluation [@Küderle2023], and relies on NumPy [@harris2020numpy], SciPy [@virtanen2020scipy], and scikit-learn [@pedregosa2011scikit] for numerical computing and Gaussian-process-based Bayesian optimization [@rasmussen2006gaussianprocesses]. Its optimization engine builds on Bayesian Optimization techniques [@snoek2012practicalbayesianoptimizationmachine; @shahriari2016bayesianoptimization] alongside the broader family of metaheuristics surveyed in @engproc2023059238.
 
 # Acknowledgements
 
