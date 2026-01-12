@@ -39,36 +39,63 @@ Existing tools for pipeline management often fall into two categories: heavy-wei
 
 `PipeOptz` addresses this need by providing an API for defining pipelines as Directed Acyclic Graphs (DAGs), with support for conditional branching and looping. In this graph, each node is a user-defined function in python, to ensure expressivity, and application to various domains. It integrates parameter optimization as a core feature, enabling users to define a search space for their pipeline's parameters and use various baseline optimization algorithms to find the best configuration.
 
-# Functionality
+# State of the field
+
+PipeOptz sits at the intersection of workflow orchestration, pipeline representation, and hyperparameter/black-box optimization. Workflow orchestrators such as Apache Airflow [@airflow] and Prefect [@prefect] provide rich operational features (scheduling, monitoring, retries, deployments) and are well-suited for production batch workflows, but they are not designed as lightweight research libraries that expose the pipeline graph as a first-class object for iterative experimentation and optimization inside another tool. On the other end of the spectrum, hyperparameter optimization (HPO) frameworks and Bayesian optimization toolkits typically assume a user-written objective function and leave the internal structure of the computational pipeline implicit in the user’s code, which limits explicit control-flow nodes, graph-level visualization, and step-wise traceability.
+
+PipeOptz was created to support the needs of Descript, where we required (i) an expressive, multi-step pipeline with explicit control-flow (loops and conditionals), (ii) heterogeneous tunable parameters optimized against an application-specific loss function, and (iii) built-in graph visualization and execution traceability for rapid research iteration. In principle, part of this functionality could be implemented by extending an existing optimization toolkit with a custom loss, but the core requirement here is the combination of "pipeline-as-a-graph" modeling, control-flow nodes, and a clean separation between execution and optimization. Because these constraints cut across the fundamental abstractions of existing orchestration/HPO tools, we implemented a dedicated library designed as a reusable backend component for research workflows rather than an operational orchestrator.
+
+To clarify our position with respect to closely related optimization libraries, Bayesian optimization frameworks such as BayesO [@Kim2023_BayesO] and pyGPGO [@Jimenez2017_pyGPGO] focus primarily on sample-efficient search strategies for expensive black-box objectives. In these systems the pipeline is usually encoded inside a single objective function, so the optimizer does not directly represent intermediate steps or control flow. PipeOptz keeps the optimization goal identical (minimize a user-defined loss), but makes the evaluation procedure explicit: the workflow is represented as a graph of nodes with dependencies and control-flow constructs, enabling node-level traceability and visualization while still treating the overall pipeline outcome as the quantity to optimize.
+
+AutoML frameworks such as NiaAML [@Pecnik2021_NiaAML] also address "pipeline + optimization", but they target the automated composition and tuning of machine-learning pipelines within a predefined space of ML components and objectives. PipeOptz is intentionally not ML-specific: it targets research workflows where the pipeline steps are arbitrary Python functions and the loss can encode domain-specific criteria (e.g., balancing geometric accuracy and the number of extracted targets), making it suitable as a backend for alternative approaches beyond conventional ML pipelines.
+
+Finally, some optimization problems are best addressed by algebraic modeling and solver-based approaches. Linopy [@Hofmann2023_Linopy], for example, provides a modeling layer for linear and mixed-integer optimization with labeled n-dimensional variables and solver backends. PipeOptz is complementary: it targets workflows whose objective is evaluated by executing an end-to-end pipeline and cannot be naturally expressed as a linear/mixed-integer model.
+
+
+
+# Software Design
+
+`PipeOptz` is designed to make research pipelines explicit and optimizable while keeping them lightweight and fully Python-native. The main design trade-off is to favor expressivity and traceability over an "objective-function-only" interface: instead of hiding the workflow inside a single function, `PipeOptz` represents it as a pipeline graph with explicit dependencies and control-flow nodes. This matters in research workflows where debugging, profiling, and iterating on multi-step processing chains is as important as finding good parameter values.
 
 `PipeOptz` is built around the following core concepts:
 
--  **`Node`**: The basic building block of a pipeline. A `Node` wraps a single Python function and its parameters. We also provide more complex nodes for control flow:
+-  **`Node`**: The basic building block of a pipeline. A `Node` wraps a single Python function and its parameters. To support non-linear workflows beyond simple DAG composition, we provide dedicated control-flow nodes that embed sub-pipelines:
     -   `NodeIf`: for conditional branching (if/else).
     -   `NodeFor`: for 'for' loops.
     -   `NodeWhile`: for 'while' loops.
 
--   **`Pipeline`**: A `Pipeline` holds the entire workflow. Nodes are added to the pipeline with their dependencies, forming a DAG. The pipeline manages the execution by following a topological order [@kahn1962topsort].
+-   **`Pipeline`**: A `Pipeline` holds the entire workflow. Nodes are added to the pipeline with their dependencies, forming a DAG. The pipeline manages execution by following a topological order [@kahn1962topsort]. During execution, the library can cache node outputs and record per-node execution time, supporting fine-grained inspection and iterative refinement of complex pipelines.
 
--   **`Parameter`**: A `Parameter` defines the type and search space for a value to be optimized. `PipeOptz` provides several types of parameters:
-    -   `IntParameter`: for integers within a given range.
-    -   `FloatParameter`: for floating-point numbers within a given range.
-    -   `ChoiceParameter`: for selecting a value from a list of choices.
-    -   `MultiChoiceParameter`: for selecting multiple values from a list of choices.
-    -   `BoolParameter`: for boolean values (`True` or `False`).
+-   **`Parameter`**: A `Parameter` defines the type and search space for a value to be optimized. `PipeOptz` provides several types of parameters: `IntParameter`, `FloatParameter`, `ChoiceParameter`, `MultiChoiceParameter`, and `BoolParameter`.
 
--   **`PipelineOptimizer`**: The engine that tunes the pipeline. It takes the following as input: a pipeline, a set of parameters to optimize, and a loss function to minimize. It uses various metaheuristic algorithms to find the best parameter values, including:
-    -   Grid Search (GS)
-    -   Bayesian Optimization (BO) [@snoek2012practicalbayesianoptimizationmachine; @shahriari2016bayesianoptimization]
-    -   Ant Colony Optimization (ACO) [@dorigo1997antcolony]
-    -   Simulated Annealing (SA) [@kirkpatrick1983simulatedannealing]
-    -   Particle Swarm Optimization (PSO) [@kennedy1995pso]
-    -   Genetic Algorithm (GA) [@holland1975adaptation]
+-   **`PipelineOptimizer`**: The optimization layer is separated from pipeline execution. It takes a pipeline, a set of parameters to optimize, and a user-defined loss function to minimize, and then evaluates candidate configurations by running the pipeline. `PipeOptz` provides several baseline optimization strategies :
+    - Grid Search (GS), 
+    - Bayesian Optimization (BO) [@snoek2012practicalbayesianoptimizationmachine; @shahriari2016bayesianoptimization], 
+    - Ant Colony Optimization (ACO) [@dorigo1997antcolony], 
+    - Simulated Annealing (SA) [@kirkpatrick1983simulatedannealing], 
+    - Particle Swarm Optimization (PSO) [@kennedy1995pso]
+    - Genetic Algorithm (GA) [@holland1975adaptation].
 
 The library also provides features for:
-
 -   **Visualization**: Pipelines can be visualized as graphs using the `to_dot` and `to_image` methods, which generate Graphviz dot files and PNG images [@gansner2000graphviz].
--   **Serialization**: Pipelines can be saved to and loaded from JSON files using the `to_json` and `from_json` methods, allowing for easy sharing and reuse of workflows.
+-   **Serialization**: Pipelines can be saved to and loaded from JSON files using the `to_json` and `from_json` methods, enabling reuse and sharing beyond a single Python script (the `.dot` export is used for visualization and does not capture full pipeline semantics).
+
+
+# Research Impact Statement
+
+PipeOptz has been used as the optimization backend of Descript-PipeOptz, a research tool aimed at extracting information from hand-drawn or complex visualizations with very limited supervision. In this setting, users provide a small number of manual extractions and the system searches for a pipeline configuration that generalizes the extraction procedure to the remaining targets. This integration demonstrates that PipeOptz supports real research workflows where the objective function is application-specific and the pipeline structure must remain explicit and modifiable.
+
+While current usage is concentrated within a small research team, the contribution is positioned for credible near-term reuse: the project is packaged for Python and distributed via PyPI, released under an MIT license, and includes automated tests, CI, and structured documentation with executable examples. In the Descript-PipeOptz use case, the optimization loop can converge quickly (on the order of tens of seconds to about a minute depending on the chosen pipeline), and the overall workflow enables tasks that would otherwise require extensive manual effort, making the approach practical for rapid iteration in low-data scenarios. Reproducibility is supported by the public repository and the reference implementation in Descript-PipeOptz, which contains all required elements to reproduce the demonstrated experiments.
+
+# AI usage disclosure
+
+We used generative-AI-assisted developer tools during software development and documentation writing, but not for drafting the JOSS manuscript.
+
+Code: GitHub Copilot (Visual Studio Code extension) (last version used : 1.104.1) and Gemini Code Assist (Visual Studio Code extension) (last version used : 2.53) were used primarily for code completion and small refactoring suggestions during implementation. No large, unverified code blocks were accepted as-is; all AI-assisted edits were reviewed, tested, and integrated by the authors, who made the primary architectural and design decisions.
+
+Documentation: Gemini Code Assist was used to accelerate writing of repetitive API documentation (docstrings, README sections). All generated text was manually reviewed and edited for correctness and consistency with the implemented behavior.
+
+Manuscript: No generative AI tools were used to write `paper.md`.
 
 # Audience
 
