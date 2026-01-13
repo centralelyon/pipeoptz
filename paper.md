@@ -153,7 +153,7 @@ im.show()
 
 # Citations
 
-`PipeOptz` complements lightweight helpers designed for algorithm evaluation [@Küderle2023], and relies on NumPy [@harris2020numpy], SciPy [@virtanen2020scipy], and scikit-learn [@pedregosa2011scikit] for numerical computing and Gaussian-process-based Bayesian optimization [@rasmussen2006gaussianprocesses]. Its optimization engine builds on Bayesian Optimization techniques [@snoek2012practicalbayesianoptimizationmachine; @shahriari2016bayesianoptimization] alongside the broader family of metaheuristics surveyed in @engproc2023059238.
+`PipeOptz` complements lightweight helpers designed for algorithm evaluation [@Küderle2023], and relies on NumPy [@harris2020numpy], SciPy [@virtanen2020scipy], and scikit-learn [@pedregosa2011scikit] for numerical computing and Gaussian-process-based Bayesian optimization [@rasmussen2006gaussianprocesses]. Its optimization engine builds on Bayesian Optimization techniques [@snoek2012practicalbayesianoptimizationmachine; @shahriari2016bayesianoptimization] alongside the broader family of metaheuristics surveyed in [@engproc2023059238].
 
 # Acknowledgements
 
