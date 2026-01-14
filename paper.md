@@ -83,9 +83,10 @@ The library also provides features for:
 
 # Research Impact Statement
 
-PipeOptz has been used as the optimization backend of Descript-PipeOptz, a research tool aimed at extracting information from hand-drawn or complex visualizations with very limited supervision. In this setting, users provide a small number of manual extractions and the system searches for a pipeline configuration that generalizes the extraction procedure to the remaining targets. This integration demonstrates that PipeOptz supports real research workflows where the objective function is application-specific and the pipeline structure must remain explicit and modifiable.
+PipeOptz is currently used as a workflow-level optimization backend in ongoing applied research prototypes where the target objective is not a standard machine-learning training loss, but an application-specific loss computed by executing a multi-step processing workflow. In these settings, practitioners need to iterate quickly over non-linear pipelines (including branching and loops) and tune heterogeneous parameters while keeping the workflow explicit, inspectable, and reproducible.
 
-While current usage is concentrated within a small research team, the contribution is positioned for credible near-term reuse: the project is packaged for Python and distributed via PyPI, released under an MIT license, and includes automated tests, CI, and structured documentation with executable examples. In the Descript-PipeOptz use case, the optimization loop can converge quickly (on the order of tens of seconds to about a minute depending on the chosen pipeline), and the overall workflow enables tasks that would otherwise require extensive manual effort, making the approach practical for rapid iteration in low-data scenarios. Reproducibility is supported by the public repository and the reference implementation in Descript-PipeOptz, which contains all required elements to reproduce the demonstrated experiments.
+As this work is ongoing, we focus on credible near-term significance and reusability signals. PipeOptz is distributed as a Python package via PyPI, released under an OSI-approved license, and includes continuous integration, automated tests, and structured documentation with runnable examples. The repository provides executable examples demonstrating core capabilities (including control-flow pipelines and end-to-end optimization), and the runtime interface exposes node-level outputs and execution timing to support debugging and profiling of research workflows. These materials make PipeOptz reusable by other researchers who need to define, visualize, and optimize DAG-based pipelines in a lightweight, Pythonic way, especially in image-processing and related scientific workflows.
+
 
 # AI usage disclosure
 
@@ -140,7 +141,7 @@ print(f"Final loss: {loss_log[-1]:.4f}")
 
 This script will search for the optimal values for `X.x` and `Y.y` that minimize the final output of the pipeline. The expected output will show the best parameters found, which should be close to `{'X.x': 3.0, 'Y.y': -1.0}`, and a final loss close to 0.
 
-We can visualize the pipeline using Figure \ref{fig:example}:
+We can visualize the pipeline using Graphviz.
 
 ```python
 from PIL import Image
@@ -149,7 +150,7 @@ im = Image.open("pipeline.png")
 im.show()
 ```
 
-![Visualization of the example pipeline.](examples/opti/opti.png?raw=true){#fig:example width=50%}
+![Visualization of the example pipeline.](examples/opti/opti.png?raw=true)
 
 # Citations
 
