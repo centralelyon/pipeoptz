@@ -329,6 +329,11 @@ class Pipeline:
         if optimize_memory:
             for node_id in node_outputs:
                 self.nodes[node_id].clear_memory()
+        
+        # Handle empty pipeline case
+        if not ordered_nodes:
+            last_node_id = None
+        
         return last_node_id, node_outputs, (sum(self.timer.values()), self.timer)
 
     def to_dot(self, filepath: Optional[str] = None, \

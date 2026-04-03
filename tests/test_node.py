@@ -418,9 +418,9 @@ class TestPipeline:
         """
         pipeline = Pipeline(name="empty_pipeline")
         last_node_id, history, (total_time, timers) = pipeline.run()
-        assert last_node_id is None or last_node_id == ""
+        assert last_node_id is None
         assert history == {}
-        assert total_time == 0 or total_time >= 0
+        assert total_time >= 0
         assert timers == {}
 
     def test_empty_pipeline_get_fixed_params(self):
