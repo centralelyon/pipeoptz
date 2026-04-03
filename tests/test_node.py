@@ -382,3 +382,51 @@ class TestNodeWhile:
         node_while = NodeWhile(node_id="while_node", condition_func=cond_func, loop_pipeline=loop_pipeline)
         with pytest.raises(ValueError, match="NodeWhile requires a 'loop_var' input"):
             node_while.execute(inputs={})
+
+
+# --- Class Pipeline tests ---
+
+class TestPipeline:
+    def test_empty_pipeline_creation(self):
+        """
+        Tests that an empty pipeline can be created successfully.
+        """
+        pipeline = Pipeline(name="empty_pipeline", description="A test empty pipeline")
+        assert pipeline.name == "empty_pipeline"
+        assert pipeline.description == "A test empty pipeline"
+        assert pipeline.nodes == {}
+        assert pipeline.node_dependencies == {}
+
+    def test_empty_pipeline_get_nodes(self):
+        """
+        Tests that get_nodes returns an empty dictionary for an empty pipeline.
+        """
+        pipeline = Pipeline(name="empty_pipeline")
+        assert pipeline.get_nodes() == {}
+
+    def test_empty_pipeline_static_order(self):
+        """
+        Tests that static_order returns an empty list for an empty pipeline.
+        """
+        pipeline = Pipeline(name="empty_pipeline")
+        order = pipeline.static_order()
+        assert order == []
+
+    def test_empty_pipeline_run(self):
+        """
+        Tests running an empty pipeline returns empty history.
+        """
+        pipeline = Pipeline(name="empty_pipeline")
+        last_node_id, history, (total_time, timers) = pipeline.run()
+        assert last_node_id is None or last_node_id == ""
+        assert history == {}
+        assert total_time == 0 or total_time >= 0
+        assert timers == {}
+
+    def test_empty_pipeline_get_fixed_params(self):
+        """
+        Tests that get_fixed_params returns an empty dictionary for an empty pipeline.
+        """
+        pipeline = Pipeline(name="empty_pipeline")
+        params = pipeline.get_fixed_params()
+        assert params == {}
