@@ -83,7 +83,7 @@ class TestVisualizer:
         """
         filepath = tmp_path / "test_graph.dot"
         visualizer = Visualizer(basic_pipeline)
-        result = visualizer.to_dot(str(filepath))
+        visualizer.to_dot(str(filepath))
         
         assert filepath.exists()
         with open(filepath, 'r') as f:
@@ -125,7 +125,7 @@ class TestVisualizer:
         """
         filepath = tmp_path / "test_graph.mmd"
         visualizer = Visualizer(basic_pipeline)
-        result = visualizer.to_mermaid(str(filepath))
+        visualizer.to_mermaid(str(filepath))
 
         assert filepath.exists()
         with open(filepath, 'r', encoding="utf-8") as f:
