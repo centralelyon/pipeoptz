@@ -109,6 +109,39 @@ class TestVisualizer:
         visualizer_dot_string = visualizer.to_dot()
         assert dot_string == visualizer_dot_string
 
+    def test_visualizer_to_mermaid_generates_string(self, basic_pipeline):
+        """
+        Tests the to_mermaid method of Visualizer.
+        """
+        visualizer = Visualizer(basic_pipeline)
+        mermaid_string = visualizer.to_mermaid()
+        assert "flowchart TD" in mermaid_string
+        assert 'add["add' in mermaid_string
+        assert 'add -->|a| mul' in mermaid_string
+
+    def test_visualizer_to_mermaid_with_filepath(self, basic_pipeline, tmp_path):
+        """
+        Tests that to_mermaid saves to a file when filepath is provided.
+        """
+        filepath = tmp_path / "test_graph.mmd"
+        visualizer = Visualizer(basic_pipeline)
+        result = visualizer.to_mermaid(str(filepath))
+
+        assert filepath.exists()
+        with open(filepath, 'r', encoding="utf-8") as f:
+            content = f.read()
+        assert "flowchart TD" in content
+
+    def test_visualizer_to_mermaid_with_conditional(self, node_if_pipeline):
+        """
+        Tests to_mermaid with a pipeline containing a NodeIf.
+        """
+        visualizer = Visualizer(node_if_pipeline)
+        mermaid_string = visualizer.to_mermaid()
+        assert "flowchart TD" in mermaid_string
+        assert 'conditional_node{"conditional_node' in mermaid_string
+        assert '-->|True|' in mermaid_string
+
     def test_visualizer_can_be_imported(self):
         """
         Tests that Visualizer can be imported from the main package.
