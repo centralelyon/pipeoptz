@@ -365,6 +365,25 @@ class Pipeline:
         visualizer = Visualizer(self)
         visualizer.to_image(filepath, dpi, add_optz, show_function)
 
+    def to_mermaid(self, filepath: Optional[str] = None, \
+                   add_optz: bool = False, show_function: bool = True,
+                   _prefix: str = "") -> str:
+        """
+        Generates a Mermaid flowchart representation of the pipeline graph.
+
+        This can be used with Mermaid-compatible renderers to visualize the
+        pipeline structure.
+
+        Args:
+            filepath (str, optional): The path to save the Mermaid text file.
+                If None, no file is saved.
+
+        Returns:
+            the Mermaid string of the pipeline
+        """
+        visualizer = Visualizer(self)
+        return visualizer.to_mermaid(filepath, add_optz, show_function, _prefix)
+
     def to_json(self, filepath: str) -> None:
         """
         Serializes the pipeline's structure to a JSON file.

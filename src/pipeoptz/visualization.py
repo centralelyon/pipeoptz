@@ -1,7 +1,8 @@
 """Visualization module for Pipeline graphs using DOT/Graphviz."""
 from __future__ import annotations
 import os
-from typing import TYPE_CHECKING, List, Optional
+import re
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     from .pipeline import Pipeline
@@ -162,6 +163,205 @@ class Visualizer:
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(dot_str)
         return "\n".join(dot_lines)
+
+    @staticmethod
+    def _mermaid_id(node_id: str, prefix: str = "") -> str:
+        """Builds a Mermaid-safe identifier."""
+        safe_id = re.sub(r"[^0-9A-Za-z_]", "_", f"{prefix}{node_id}")
+        if safe_id == "":
+            return "node"
+        if safe_id[0].isdigit():
+            return f"n_{safe_id}"
+        return safe_id
+
+    @staticmethod
+    def _mermaid_text(text: str) -> str:
+        """Escapes label text for Mermaid."""
+        return text.replace('"', "'").replace("<lambda>", "lambda")
+
+    @staticmethod
+    def _function_label(node: Node) -> str:
+        """Returns a readable function label for a node."""
+        func_module = node.func.__module__
+        func_name = node.func.__name__
+        if func_name == "<lambda>":
+            return "lambda"
+        if func_module == "__main__":
+            return func_name
+        return f"{func_module}.{func_name}"
+
+    @classmethod
+    def _add_mermaid_node(cls, state: Dict[str, Any], node_id: str,
+                          label: str, shape: str = "box") -> None:
+        """Adds a Mermaid node definition once."""
+        if node_id in state["defined_nodes"]:
+            return
+        wrappers = {
+            "box": ('["', '"]'),
+            "diamond": ('{"', '"}'),
+            "terminal": ('(["', '"])'),
+        }
+        prefix, suffix = wrappers[shape]
+        state["lines"].append(f'    {node_id}{prefix}{cls._mermaid_text(label)}{suffix}')
+        state["defined_nodes"].add(node_id)
+
+    @staticmethod
+    def _add_mermaid_edge(state: Dict[str, Any], source: str,
+                          target: str, label: Optional[str] = None) -> None:
+        """Adds a Mermaid edge definition once."""
+        edge = f"{source}|{label}|{target}" if label is not None else f"{source}|{target}"
+        if edge in state["defined_edges"]:
+            return
+        if label is None:
+            state["lines"].append(f"    {source} --> {target}")
+        else:
+            state["lines"].append(f'    {source} -->|{label}| {target}')
+        state["defined_edges"].add(edge)
+
+    def to_mermaid(self, filepath: Optional[str] = None,
+                   add_optz: bool = False, show_function: bool = True,
+                   _prefix: str = "", _state: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Generates a Mermaid flowchart representation of the pipeline graph.
+
+        Args:
+            filepath (str, optional): The path to save the Mermaid text file.
+                If None, no file is saved.
+
+        Returns:
+            the Mermaid flowchart string of the pipeline
+        """
+        is_root = _state is None
+        if _state is None:
+            _state = {
+                "lines": ["flowchart TD"],
+                "defined_nodes": set(),
+                "defined_edges": set(),
+            }
+
+        last_node_id = self.pipeline.static_order()[-1] if self.pipeline.static_order() else None
+
+        for node_id, node in self.pipeline.nodes.items():
+            full_id = self._mermaid_id(node_id, _prefix)
+            is_last = node_id == last_node_id and _prefix == ""
+
+            if isinstance(node, NodeIf):
+                label = node_id
+                if show_function:
+                    label += f" | {self._function_label(node)}"
+                self._add_mermaid_node(_state, full_id, label, shape="diamond")
+
+                Visualizer(node.true_pipeline).to_mermaid(
+                    None, add_optz, show_function, full_id + "_T_", _state
+                )
+                Visualizer(node.false_pipeline).to_mermaid(
+                    None, add_optz, show_function, full_id + "_F_", _state
+                )
+
+                output_id = self._mermaid_id(f"{node_id}_output", _prefix)
+                self._add_mermaid_node(_state, output_id, "If Output")
+
+                true_order = node.true_pipeline.static_order()
+                false_order = node.false_pipeline.static_order()
+                if true_order:
+                    self._add_mermaid_edge(
+                        _state, full_id, self._mermaid_id(true_order[0], full_id + "_T_"), "True"
+                    )
+                    self._add_mermaid_edge(
+                        _state, self._mermaid_id(true_order[-1], full_id + "_T_"), output_id
+                    )
+                else:
+                    self._add_mermaid_edge(_state, full_id, output_id, "True")
+
+                if false_order:
+                    self._add_mermaid_edge(
+                        _state, full_id, self._mermaid_id(false_order[0], full_id + "_F_"), "False"
+                    )
+                    self._add_mermaid_edge(
+                        _state, self._mermaid_id(false_order[-1], full_id + "_F_"), output_id
+                    )
+                else:
+                    self._add_mermaid_edge(_state, full_id, output_id, "False")
+
+            elif isinstance(node, NodeFor):
+                self._add_mermaid_node(_state, full_id, f"{node_id} | For Loop")
+                Visualizer(node.loop_pipeline).to_mermaid(
+                    None, add_optz, show_function, full_id + "_L_", _state
+                )
+
+                output_id = self._mermaid_id(f"{node_id}_output", _prefix)
+                self._add_mermaid_node(_state, output_id, "For Output")
+                loop_order = node.loop_pipeline.static_order()
+                if loop_order:
+                    loop_first = self._mermaid_id(loop_order[0], full_id + "_L_")
+                    loop_last = self._mermaid_id(loop_order[-1], full_id + "_L_")
+                    self._add_mermaid_edge(_state, full_id, loop_first, "start")
+                    self._add_mermaid_edge(_state, loop_last, full_id, "next")
+                    self._add_mermaid_edge(_state, loop_last, output_id)
+                else:
+                    self._add_mermaid_edge(_state, full_id, output_id)
+
+            elif isinstance(node, NodeWhile):
+                label = f"{node_id} | While Loop"
+                if show_function:
+                    label += f" | {self._function_label(node)}"
+                self._add_mermaid_node(_state, full_id, label, shape="diamond")
+                Visualizer(node.loop_pipeline).to_mermaid(
+                    None, add_optz, show_function, full_id + "_L_", _state
+                )
+
+                output_id = self._mermaid_id(f"{node_id}_output", _prefix)
+                self._add_mermaid_node(_state, output_id, "While Output")
+                loop_order = node.loop_pipeline.static_order()
+                if loop_order:
+                    loop_first = self._mermaid_id(loop_order[0], full_id + "_L_")
+                    loop_last = self._mermaid_id(loop_order[-1], full_id + "_L_")
+                    self._add_mermaid_edge(_state, full_id, loop_first, "start")
+                    self._add_mermaid_edge(_state, loop_last, full_id, "next")
+                    self._add_mermaid_edge(_state, loop_last, output_id)
+                else:
+                    self._add_mermaid_edge(_state, full_id, output_id)
+
+            elif isinstance(node, type(self.pipeline)):
+                Visualizer(node).to_mermaid(None, add_optz, show_function, full_id + "_", _state)
+
+            elif add_optz or not node_id.startswith("[optz]"):
+                label = node_id
+                if show_function:
+                    label += f" | {self._function_label(node)}"
+                param_keys = list(node.get_fixed_params().keys())
+                if param_keys:
+                    label += f" | params: {', '.join(param_keys)}"
+                shape = "terminal" if is_last else "box"
+                self._add_mermaid_node(_state, full_id, label, shape=shape)
+
+        for to_id, deps in self.pipeline.node_dependencies.items():
+            for input_name, from_id in deps.items():
+                to_label = self._mermaid_id(to_id, _prefix)
+                label_text = input_name
+                if from_id.startswith("run_params:"):
+                    if _prefix != "":
+                        continue
+                    input_label = input_name.split(":")[-1]
+                    param_id = self._mermaid_id(f"params_{input_label}")
+                    self._add_mermaid_node(_state, param_id, input_label)
+                    self._add_mermaid_edge(_state, param_id, to_label, input_label)
+                elif isinstance(self.pipeline.nodes[from_id], (NodeIf, NodeFor, NodeWhile)):
+                    from_label = self._mermaid_id(f"{from_id}_output", _prefix)
+                    self._add_mermaid_edge(_state, from_label, to_label, label_text)
+                elif isinstance(self.pipeline.nodes[to_id], (NodeIf, NodeWhile)) and \
+                     input_name.startswith("condition_func:"):
+                    from_label = self._mermaid_id(from_id, _prefix)
+                    self._add_mermaid_edge(_state, from_label, to_label, label_text[15:])
+                elif add_optz or not from_id.startswith("[optz]"):
+                    from_label = self._mermaid_id(from_id, _prefix)
+                    self._add_mermaid_edge(_state, from_label, to_label, label_text)
+
+        mermaid_str = "\n".join(_state["lines"])
+        if is_root and filepath is not None:
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(mermaid_str)
+        return mermaid_str
 
     def to_image(self, filepath: str, dpi: int = 160,
                  add_optz: bool = False, show_function: bool = True) -> None:
