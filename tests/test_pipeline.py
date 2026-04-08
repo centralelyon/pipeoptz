@@ -236,6 +236,15 @@ class TestPipelineSerialization:
         assert '"add" -> "mul"' in dot_string
         assert 'label="a"' in dot_string
 
+    def test_to_mermaid_generates_string(self, basic_pipeline):
+        """
+        Tests the to_mermaid method.
+        """
+        mermaid_string = basic_pipeline.to_mermaid()
+        assert "flowchart TD" in mermaid_string
+        assert 'add["add' in mermaid_string
+        assert 'add -->|a| mul' in mermaid_string
+
     def test_to_and_from_json(self, basic_pipeline, tmp_path, add_func, mul_func):
         """
         Tests the to_json and from_json methods.

@@ -1,0 +1,11 @@
+flowchart TD
+    A["A | add | params: x, y"]
+    B["B | multiply | params: b"]
+    C["C | subtract | params: y"]
+    D["D | add | params: x"]
+    E(["E | multiply"])
+    A -->|a| B
+    B -->|x| C
+    A -->|y| D
+    C -->|a| E
+    D -->|b| E
