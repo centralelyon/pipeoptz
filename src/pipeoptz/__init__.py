@@ -7,7 +7,7 @@ from .pipeline import Pipeline
 from .optimizer import PipelineOptimizer
 from .visualization import Visualizer
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 __all__ = ["Node", "NodeIf", "NodeFor", "NodeWhile", "IntParameter",
            "FloatParameter", "BoolParameter", "ChoiceParameter",
            "MultiChoiceParameter", "Pipeline", "PipelineOptimizer", "Visualizer"]

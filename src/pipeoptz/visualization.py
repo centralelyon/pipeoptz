@@ -4,11 +4,10 @@ import os
 import re
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-if TYPE_CHECKING:
-    from .pipeline import Pipeline
-
 from .node import Node, NodeIf, NodeFor, NodeWhile
 
+if TYPE_CHECKING:
+    from .pipeline import Pipeline
 
 class Visualizer:
     """Handles visualization of Pipeline graphs in DOT format and PNG images."""

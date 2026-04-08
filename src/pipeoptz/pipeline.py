@@ -106,14 +106,14 @@ class Pipeline:
         """
         if predecessors is None:
             predecessors = {}
-        
+
         node_id = node.get_id()
         if node_id.startswith("run_params:"):
             raise ValueError(
                 f"The ID of a node cannot start with 'run_params:'. "
                 f"Got: '{node_id}'"
             )
-        
+
         if isinstance(node, Node):
             if node_id in self.nodes:
                 raise ValueError(f"A node with id '{node_id}' already exists.")
@@ -334,11 +334,11 @@ class Pipeline:
         if optimize_memory:
             for node_id in node_outputs:
                 self.nodes[node_id].clear_memory()
-        
+
         # Handle empty pipeline case
         if not ordered_nodes:
             last_node_id = None
-        
+
         return last_node_id, node_outputs, (sum(self.timer.values()), self.timer)
 
     def to_dot(self, filepath: Optional[str] = None, \

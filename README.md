@@ -5,7 +5,7 @@
   <a href="https://pypi.org/project/pipeoptz/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pipeoptz"></a>
   <a href="https://github.com/centralelyon/pipeoptz/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/centralelyon/pipeoptz/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/centralelyon/pipeoptz/blob/main/LICENSE"><img alt="PyPI - License" src="https://img.shields.io/pypi/l/pipeoptz"></a>
-  <a href=""><img alt="pylint Score" src="https://mperlet.github.io/pybadge/badges/9.50.svg"></a>
+  <a href=""><img alt="pylint Score" src="https://mperlet.github.io/pybadge/badges/9.53.svg"></a>
   <a href="https://joss.theoj.org/papers/a0af364ea2e02b2cd573ce014d436882"><img src="https://joss.theoj.org/papers/a0af364ea2e02b2cd573ce014d436882/status.svg"></a>
 </p>
 
