@@ -201,7 +201,7 @@ class NodeIf(Node):
                                                   optimize_memory,
                                                   self.skip_failed_loop,
                                                   self.debug)
-        self.output = id, hist
+        self.output = node_id, hist
         return hist[node_id]
 
     def get_fixed_params(self) -> Dict[str, Any]:
