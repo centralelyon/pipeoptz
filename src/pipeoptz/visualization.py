@@ -1,6 +1,7 @@
 """Visualization module for Pipeline graphs using DOT/Graphviz."""
 from __future__ import annotations
 import os
+import subprocess
 import re
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -371,12 +372,16 @@ class Visualizer:
                         add_optz=add_optz, show_function=show_function)
             delete = True
         try:
-            res = os.system(f'dot -Tpng -Gdpi={dpi} \
-                            "{os.path.splitext(filepath)[0] + ".dot"}" -o "{filepath}"')
+            res = subprocess.run(
+                ["dot", "-Tpng", f"-Gdpi={int(dpi)}", "-o", filepath,
+                 os.path.splitext(filepath)[0] + ".dot"],
+                check=True,
+            )
+
         except Exception as e:
             raise RuntimeError("Error during PNG generation.\n"+
                                "Do you have graphviz installed?") from e
-        if res:
+        if res.returncode != 0:
             print("Error during PNG generation")
         if delete:
             os.remove(os.path.splitext(filepath)[0] + ".dot")
