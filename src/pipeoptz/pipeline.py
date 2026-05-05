@@ -463,7 +463,7 @@ class Pipeline:
         else:
             module_name, function_name = '__main__', type_str
         if function_name == '<lambda>':
-            raise ImportError("Impossible derésoudre une fonction lambda depuis un fichier JSON.")
+            raise ImportError("Impossible to resolve a lambda function from a JSON file.")
         if module_name == 'builtins':
             return getattr(importlib.import_module(module_name), function_name)
         if module_name not in sys.modules:
@@ -471,7 +471,7 @@ class Pipeline:
         else:
             module = sys.modules[module_name]
         if not hasattr(module, function_name):
-            raise ImportError(f"Le module '{module_name}' n'a pas de fonction '{function_name}'")
+            raise ImportError(f"The package '{module_name}' does not have a function called '{function_name}'")
         return getattr(module, function_name)
 
     @classmethod
@@ -539,7 +539,7 @@ class Pipeline:
                 elif node_type == "SubPipeline":
                     sub_pipeline = build_pipeline(node_data["pipeline"])
                     pipeline_instance.add_node(sub_pipeline, predecessors)
-                    continue  # Ne pas réajouter
+                    continue  # Do not re-add
                 else:
                     func = resolver(node_type)
                     node = Node(node_id, func, fixed_params)
