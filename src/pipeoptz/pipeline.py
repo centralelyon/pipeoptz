@@ -107,14 +107,13 @@ class Pipeline:
         if predecessors is None:
             predecessors = {}
 
-        node_id = node.get_id()
-        if node_id.startswith("run_params:"):
-            raise ValueError(
-                f"The ID of a node cannot start with 'run_params:'. "
-                f"Got: '{node_id}'"
-            )
-
         if isinstance(node, Node):
+            node_id = node.get_id()
+            if node_id.startswith("run_params:"):
+                raise ValueError(
+                    f"The ID of a node cannot start with 'run_params:'. "
+                    f"Got: '{node_id}'"
+                )
             if node_id in self.nodes:
                 raise ValueError(f"A node with id '{node_id}' already exists.")
             self.nodes[node_id] = node
