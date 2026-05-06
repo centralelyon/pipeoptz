@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://ntt.readthedocs.io/
+    about: Check the docs for usage and installation help.
+  - name: GitHub Discussions
+    url: https://github.com/centralelyon/ntt/discussions
+    about: Ask questions or share ideas with the community.
