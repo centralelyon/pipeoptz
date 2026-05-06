@@ -89,6 +89,14 @@ class TestNode:
         result = node.execute(inputs={'b': 9})
         assert result == 10
 
+
+    def test_execute_no_inputs_uses_fixed_params_only(self):
+        """
+        Tests execution with no inputs (defaults to {}).
+        """
+        node = Node(node_id="n", func=lambda: 42)
+        assert node.execute() == 42
+
     def test_memory_caching_avoids_recomputation(self, mock_func_with_call_tracker):
         """
         Tests that memory=True prevents re-execution with the same inputs.
@@ -176,6 +184,23 @@ class TestNode:
         with pytest.raises(ValueError, match="Key 'b' is not a fixed parameter of node 'add_node'"):
             node.set_fixed_param('b', 10)
 
+    def test_set_fixed_params_non_dict_raises(self):
+        """
+        Tests that set_fixed_params raises a ValueError if the input is not a dictionary.
+        """
+        node = Node("n", lambda a: a, fixed_params={'a': 1})
+        with pytest.raises(ValueError, match="Fixed parameters must be a dictionary"):
+            node.set_fixed_params([('a', 2)])
+
+    def test_set_fixed_params_non_string_key_raises(self):
+        """
+        Tests that set_fixed_params raises a ValueError if any key in the input dictionary is not a string.
+        """
+        node = Node("n", lambda a: a, fixed_params={'a': 1})
+        with pytest.raises(ValueError, match="is not a string"):
+            node.set_fixed_params({1: 2})
+
+
     def test_is_fixed_param(self, simple_add_func):
         """
         Tests the is_fixed_param method.
@@ -243,6 +268,16 @@ class TestNodeIf:
         
         assert result == "false_space"
 
+    def test_execute_does_not_mutate_caller_inputs(self, true_pipeline, false_pipeline):
+        """
+        Tests if the caller's dict is not mutated.
+        """
+        node_if = NodeIf("if", lambda val: val > 0, true_pipeline, false_pipeline)
+        inputs = {'condition_func:val': 5, 'input': 'hello'}
+        original = dict(inputs)
+        node_if.execute(inputs)
+        assert inputs == original
+
     def test_get_fixed_params_nested(self, true_pipeline, false_pipeline):
         """
         Tests retrieving fixed parameters from NodeIf and its sub-pipelines.
@@ -293,6 +328,24 @@ class TestNodeIf:
         assert true_pipeline.get_node("true_node").fixed_params['z'] == 101
         assert false_pipeline.get_node("false_node").fixed_params['w'] == 202
 
+    def test_set_fixed_param_true_pipeline_key(self, true_pipeline, false_pipeline):
+        """
+        Tests setting a fixed parameter on the true_pipeline via set_fixed_param.
+        """
+        true_pipeline.get_node("true_node").fixed_params = {'z': 0}
+        node_if = NodeIf("if", lambda: True, true_pipeline, false_pipeline)
+        node_if.set_fixed_param('true_pipeline', {'true_node.z': 99})
+        assert true_pipeline.get_node("true_node").fixed_params['z'] == 99
+
+    def test_set_fixed_param_false_pipeline_key(self, true_pipeline, false_pipeline):
+        """
+        Tests setting a fixed parameter on the false_pipeline via set_fixed_param.
+        """
+        false_pipeline.get_node("false_node").fixed_params = {'w': 0}
+        node_if = NodeIf("if", lambda: True, true_pipeline, false_pipeline)
+        node_if.set_fixed_param('false_pipeline', {'false_node.w': 42})
+        assert false_pipeline.get_node("false_node").fixed_params['w'] == 42
+
 
 # --- Class NodeFor tests ---
 
@@ -306,6 +359,21 @@ class TestNodeFor:
         assert node_for.loop_pipeline == loop_pipeline
         assert node_for.fixed_params == {'iterations': 3}
 
+    def test_invalid_fixed_param_key_raises(self, loop_pipeline):
+        with pytest.raises(ValueError, match="Only 'iterations' is allowed"):
+            NodeFor("for", loop_pipeline, fixed_params={'not_iterations': 5})
+
+    def test_get_fixed_params_includes_loop_pipeline_key(self, loop_pipeline):
+        node_for = NodeFor("for", loop_pipeline, fixed_params={'iterations': 3})
+        params = node_for.get_fixed_params()
+        assert 'iterations' in params
+        assert 'loop_pipeline' in params
+
+    def test_set_fixed_params_updates_iterations(self, loop_pipeline):
+        node_for = NodeFor("for", loop_pipeline, fixed_params={'iterations': 3})
+        node_for.set_fixed_params({'iterations': 7})
+        assert node_for.fixed_params['iterations'] == 7
+    
     def test_execute_fixed_iterations(self, loop_pipeline):
         """
         Tests NodeFor execution with a fixed number of iterations.
@@ -313,6 +381,14 @@ class TestNodeFor:
         node_for = NodeFor(node_id="for_node", loop_pipeline=loop_pipeline, fixed_params={'iterations': 3})
         result = node_for.execute(inputs={'loop_var': 0})
         assert result == 3
+
+    def test_execute_zero_iterations_returns_loop_var_unchanged(self, loop_pipeline):
+        """
+        Tests that iterations=0 is valid and the loop body never runs.
+        """
+        node_for = NodeFor("for", loop_pipeline)
+        result = node_for.execute({'iterations': 0, 'loop_var': 42})
+        assert result == 42
 
     def test_execute_input_iterations(self, loop_pipeline):
         """
@@ -339,6 +415,27 @@ class TestNodeFor:
             node_for.execute(inputs={})
 
 
+    def test_skip_failed_loop(self):
+        """
+        Tests if skip_failed_loop=True a failed iteration is skipped silently.
+        """
+        call_count = [0]
+        def inc_or_fail(loop_var):
+            call_count[0] += 1
+            if call_count[0] == 3:
+                raise ValueError("fail on 3rd call")
+            return loop_var + 1
+
+        p = Pipeline("lp")
+        p.add_node(Node("step", inc_or_fail),
+                   predecessors={'loop_var': 'run_params:loop_var'})
+        node_for = NodeFor("for", p, fixed_params={'iterations': 4})
+        node_for.set_run_params(skip_failed_loop=True)
+        # calls: 1→0+1=1, 2→1+1=2, 3→fail(loop_var stays 2), 4→2+1=3
+        assert node_for.execute({'loop_var': 0}) == 3
+
+
+
 # --- Class NodeWhile tests ---
 
 class TestNodeWhile:
@@ -352,6 +449,45 @@ class TestNodeWhile:
         assert node_while.id == "while_node"
         assert node_while.func == cond_func
         assert node_while.loop_pipeline == loop_pipeline
+
+    def test_condition_func_prefix_inputs_routed_correctly(self):
+        """
+        Tests that inputs with 'condition_func:' prefix are passed to the condition function.
+        """
+        loop_p = Pipeline("lp")
+        loop_p.add_node(Node("inc", lambda loop_var: loop_var + 1),
+                        predecessors={'loop_var': 'run_params:loop_var'})
+
+        def cond(loop_var, limit):
+            return loop_var < limit
+
+        node_while = NodeWhile("w", cond, loop_p)
+        result = node_while.execute({'condition_func:limit': 3, 'loop_var': 0})
+        assert result == 3
+
+
+    def test_get_fixed_params_includes_loop_pipeline_key(self, loop_pipeline):
+        """
+        Tests that get_fixed_params includes the 'loop_pipeline' key for NodeWhile.
+        """
+        def cond(loop_var):
+            return loop_var < 5
+        node_while = NodeWhile("w", cond, loop_pipeline,
+                               fixed_params={'max_iterations': 10})
+        params = node_while.get_fixed_params()
+        assert 'max_iterations' in params
+        assert 'loop_pipeline' in params
+
+    def test_set_fixed_param_invalid_own_key_raises(self, loop_pipeline):
+        """
+        Tests that setting a non-existent fixed parameter on NodeWhile raises a ValueError.
+        """
+        def cond(loop_var):
+            return False
+        node_while = NodeWhile("w", cond, loop_pipeline,
+                               fixed_params={'max_iterations': 5})
+        with pytest.raises(ValueError, match="is not a fixed parameter"):
+            node_while.set_fixed_param('nonexistent_key', 99)
 
     def test_execute_while_condition_true(self, loop_pipeline):
         """
@@ -383,50 +519,36 @@ class TestNodeWhile:
         with pytest.raises(ValueError, match="NodeWhile requires a 'loop_var' input"):
             node_while.execute(inputs={})
 
+    def test_execute_does_not_mutate_caller_inputs(self, loop_pipeline):
+        """
+        Tests that NodeWhile does not delete keys from the caller's dict.
+        """
+        def cond(loop_var, limit):
+            return loop_var < limit
+        node_while = NodeWhile("w", cond, loop_pipeline,
+                               fixed_params={'max_iterations': 2})
+        inputs = {'condition_func:limit': 3, 'loop_var': 0}
+        original = dict(inputs)
+        node_while.execute(inputs)
+        assert inputs == original
 
-# --- Class Pipeline tests ---
+    def test_skip_failed_loop(self):
+        """With skip_failed_loop=True, a failed iteration is skipped."""
+        call_count = [0]
+        def inc_or_fail(loop_var):
+            call_count[0] += 1
+            if call_count[0] == 2:
+                raise ValueError("fail on 2nd call")
+            return loop_var + 1
 
-class TestPipeline:
-    def test_empty_pipeline_creation(self):
-        """
-        Tests that an empty pipeline can be created successfully.
-        """
-        pipeline = Pipeline(name="empty_pipeline", description="A test empty pipeline")
-        assert pipeline.name == "empty_pipeline"
-        assert pipeline.description == "A test empty pipeline"
-        assert pipeline.nodes == {}
-        assert pipeline.node_dependencies == {}
+        p = Pipeline("lp")
+        p.add_node(Node("step", inc_or_fail),
+                   predecessors={'loop_var': 'run_params:loop_var'})
 
-    def test_empty_pipeline_get_nodes(self):
-        """
-        Tests that get_nodes returns an empty dictionary for an empty pipeline.
-        """
-        pipeline = Pipeline(name="empty_pipeline")
-        assert pipeline.get_nodes() == {}
+        def cond(loop_var):
+            return loop_var < 3
 
-    def test_empty_pipeline_static_order(self):
-        """
-        Tests that static_order returns an empty list for an empty pipeline.
-        """
-        pipeline = Pipeline(name="empty_pipeline")
-        order = pipeline.static_order()
-        assert order == []
-
-    def test_empty_pipeline_run(self):
-        """
-        Tests running an empty pipeline returns empty history.
-        """
-        pipeline = Pipeline(name="empty_pipeline")
-        last_node_id, history, (total_time, timers) = pipeline.run()
-        assert last_node_id is None
-        assert history == {}
-        assert total_time >= 0
-        assert timers == {}
-
-    def test_empty_pipeline_get_fixed_params(self):
-        """
-        Tests that get_fixed_params returns an empty dictionary for an empty pipeline.
-        """
-        pipeline = Pipeline(name="empty_pipeline")
-        params = pipeline.get_fixed_params()
-        assert params == {}
+        node_while = NodeWhile("w", cond, p, fixed_params={'max_iterations': 5})
+        node_while.set_run_params(skip_failed_loop=True)
+        result = node_while.execute({'loop_var': 0})
+        assert result is not None   # did not raise

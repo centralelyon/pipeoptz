@@ -148,6 +148,20 @@ class TestFloatParameter:
         p = FloatParameter("node1", "p1", 0, 10)
         assert isinstance(p.min_value, float)
         assert isinstance(p.max_value, float)
+    
+    def test_init_invalid_type_raises(self):
+        """
+        Tests that initialization with non-float types raises an error.
+        """
+        with pytest.raises(ValueError, match="must be floats"):
+            FloatParameter("n", "p", "bad", 10.0)
+
+    def test_init_min_greater_than_max_raises(self):
+        """
+        Tests that initialization with min_value > max_value raises an error.
+        """
+        with pytest.raises(ValueError, match="min_value cannot be greater than max_value"):
+            FloatParameter("n", "p", 10.0, 5.0)
 
     def test_set_value_valid(self):
         """
@@ -168,13 +182,27 @@ class TestFloatParameter:
             p.set_value(10.1)
 
     def test_set_value_with_step(self):
+        """
+        Tests that setting a value that doesn't align with the step raises an error.
+        """
         p = FloatParameter("node1", "p1", 0.0, 1.0, step=0.25)
         p.set_value(0.5)
         assert p.get_value() == 0.5
         with pytest.raises(ValueError, match="Value must be in range"):
             p.set_value(0.6)
+    
+    def test_set_value_invalid_type_raises(self):
+        """
+        Tests that setting a non-float value raises an error.
+        """
+        p = FloatParameter("n", "p", 0.0, 10.0)
+        with pytest.raises(ValueError, match="must be a float"):
+            p.set_value("five")
 
     def test_get_description(self):
+        """
+        Tests the get_description method of a FloatParameter.
+        """
         p = FloatParameter("node1", "p1", 0.0, 10.0, step=0.5)
         p.set_value(5.5)
         desc = p.get_description()
@@ -192,6 +220,13 @@ class TestChoiceParameter:
         p = ChoiceParameter("node1", "p1", choices)
         assert p.choices == choices
         assert p.get_value() in choices
+    
+    def test_empty_choices_raises(self):
+        """
+        Tests that initializing with an empty choices list raises an error.
+        """
+        with pytest.raises(ValueError, match="non-empty"):
+            ChoiceParameter("n", "p", [])
 
     def test_set_value_valid(self):
         """
@@ -208,6 +243,16 @@ class TestChoiceParameter:
         p = ChoiceParameter("node1", "p1", ["a", "b", "c"])
         with pytest.raises(ValueError, match="Value must be one of the following options"):
             p.set_value("d")
+    
+    def test_external_mutation_of_choices_list_does_not_affect_parameter(self):
+        """
+        Tests that mutating the original choices list after initializing the ChoiceParameter does not affect the parameter's internal choices, ensuring that the parameter maintains its own copy of the choices list for data integrity.
+        """
+        original = ["a", "b", "c"]
+        p = ChoiceParameter("n", "p", original)
+        original.append("d")
+        assert "d" not in p.choices
+
 
     def test_get_random_value(self):
         """
@@ -219,6 +264,9 @@ class TestChoiceParameter:
         assert rand_val in choices
 
     def test_get_description(self):
+        """
+        Tests the get_description method of a ChoiceParameter.
+        """
         p = ChoiceParameter("node1", "p1", ["a", "b", "c"])
         p.set_value("b")
         desc = p.get_description()
@@ -309,6 +357,9 @@ class TestMultiChoiceParameter:
         assert all(item in choices for item in rand_val)
 
     def test_get_description(self):
+        """
+        Tests the get_description method of a MultiChoiceParameter.
+        """
         choices = ["a", "b", "c", "d"]
         p = MultiChoiceParameter("node1", "p1", choices, min_choices=2, max_choices=3)
         p.set_value(["a", "d"])
@@ -353,6 +404,9 @@ class TestBoolParameter:
         assert isinstance(rand_val, bool)
 
     def test_get_description(self):
+        """
+        Tests the get_description method of a BoolParameter.
+        """
         p = BoolParameter("node1", "p1")
         p.set_value(True)
         desc = p.get_description()

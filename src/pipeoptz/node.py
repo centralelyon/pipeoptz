@@ -184,6 +184,7 @@ class NodeIf(Node):
         """
         if inputs is None:
             inputs = {}
+        inputs = inputs.copy()
 
         condition_inputs: Dict[str, Any] = {}
         for k in inputs:
@@ -315,7 +316,7 @@ class NodeFor(Node):
             inputs = {}
 
         iterations: Optional[int] = inputs.get('iterations', self.fixed_params.get('iterations'))
-        if not iterations:
+        if iterations is None:
             raise ValueError("NodeFor requires an 'iterations' input in \
                              'inputs' or in 'fixed_params'.")
 
@@ -434,6 +435,7 @@ class NodeWhile(Node):
         """
         if inputs is None:
             inputs = {}
+        inputs = inputs.copy()
 
         condition_inputs: Dict[str, Any] = {}
         for k in inputs:
