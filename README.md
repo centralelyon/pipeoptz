@@ -119,7 +119,36 @@ Several example pipelines are provided in the `examples/` directory. These inclu
 -   `cond/`: A pipeline demonstrating conditional branching.
 -   `for/`: A pipeline demonstrating for loops.
 -   `while/`: A pipeline demonstrating while loops.
--   `opti/`: A pipeline demonstrating optimization pipeline with tunable parameters.
+-   `opti/`: A pipeline demonstrating optimization pipeline with tunable parameters.ù
+
+## Docker
+
+You can also use PipeOptz with Docker. This is useful for running the library in a clean, isolated environment.
+
+### Build the Docker image
+
+From the root of the repository, build the Docker image with:
+
+```bash
+docker build -t pipeoptz .
+```
+
+### Run the Docker container
+
+To start an interactive shell in the container:
+
+```bash
+docker run -it --rm pipeoptz
+```
+
+You can also mount your local directory to the container to access your files:
+
+```bash
+docker run -it --rm -v "$PWD":/workspace pipeoptz
+```
+
+This will mount your current directory to `/workspace` inside the container.
+
 
 ## Building Docs
 
