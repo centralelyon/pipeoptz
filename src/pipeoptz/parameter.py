@@ -263,8 +263,10 @@ class ChoiceParameter(Parameter):
             param_name (str): The name of the parameter.
             choices (list): A list of the possible values for the parameter.
         """
+        if not choices:
+            raise ValueError("choices must be a non-empty list.")
         super().__init__(node_id, param_name)
-        self.choices: List[Any] = choices
+        self.choices: List[Any] = list(choices)
         self.get_random_value(True)
 
     def set_value(self, value: Any) -> None:

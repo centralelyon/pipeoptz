@@ -4,8 +4,8 @@ import json
 import sys
 import os
 sys.path.append(os.path.abspath("../src/"))
-from pipeoptz.pipeline import Pipeline
-from pipeoptz.node import Node, NodeIf
+from pipeoptz.pipeline import Pipeline, _product
+from pipeoptz.node import Node, NodeIf, NodeFor, NodeWhile
 
 
 @pytest.fixture
@@ -91,6 +91,40 @@ def failing_loop_pipeline():
 
 # --- Classes tests ---
 
+class TestProduct:
+    def test_basic_cartesian_product(self):
+        """
+        Tests that the _product function correctly generates the Cartesian product of two input lists, producing all possible pairs of elements from the first and second list.
+        """
+        result = list(_product([1, 2], ['a', 'b']))
+        assert result == [(1, 'a'), (1, 'b'), (2, 'a'), (2, 'b')]
+
+    def test_max_combinations_limits_output(self):
+        """
+        Tests that the _product function respects the max_combinations parameter by limiting the number of generated combinations to the specified maximum, ensuring that it does not produce more pairs than allowed when max_combinations is set.
+        """
+        result = list(_product([1, 2], [3, 4], max_combinations=2))
+        assert len(result) == 2
+
+    def test_random_sampling_returns_correct_count(self):
+        """
+        Tests that the _product function returns a random sample of combinations when the random parameter is set to True.
+        """
+        result = list(_product([1, 2, 3], [4, 5, 6], random=True, max_combinations=5))
+        assert len(result) == 5
+        for a, b in result:
+            assert a in [1, 2, 3]
+            assert b in [4, 5, 6]
+
+    def test_random_optimize_memory_returns_correct_count(self):
+        """
+        Tests that the _product function returns a random sample of combinations with optimize_memory=True, ensuring that it generates the correct number of combinations while optimizing memory usage.
+        """
+        result = list(_product([1, 2, 3], [4, 5, 6],
+                               random=True, max_combinations=4, optimize_memory=True))
+        assert len(result) == 4
+
+
 class TestPipelineStructure:
     def test_initialization(self):
         """
@@ -123,6 +157,26 @@ class TestPipelineStructure:
         p.add_node(node1)
         with pytest.raises(ValueError, match="A node with id 'add1' already exists."):
             p.add_node(node2)
+    
+    def test_add_node_id_starting_with_run_params_raises(self):
+        """
+        Tests that adding a node with an id starting with 'run_params:' raises an error, ensuring that node identifiers do not conflict with the reserved namespace used for run parameters in the pipeline execution context.
+        """
+        p = Pipeline("test")
+        node = Node("run_params:bad", lambda: 1)
+        with pytest.raises(ValueError, match="cannot start with 'run_params:'"):
+            p.add_node(node)
+    
+    def test_add_duplicate_sub_pipeline_raises(self):
+        """
+        Tests that adding the same sub-pipeline twice raises an error, ensuring that the pipeline structure maintains unique node identifiers and prevents conflicts when incorporating sub-pipelines.
+        """
+        sub = Pipeline("dup")
+        p = Pipeline("main")
+        p.add_node(sub)
+        with pytest.raises(ValueError, match="already exists"):
+            p.add_node(sub)
+
 
     def test_get_node(self, basic_pipeline):
         """
@@ -205,6 +259,33 @@ class TestPipelineRun:
         assert last_node_id == "conditional_node"
         assert outputs['conditional_node'] == 4  # 5 - 1
 
+    def test_run_nodefor_in_pipeline(self):
+        """
+        Tests the execution of the pipeline with a NodeFor, ensuring that the loop executes the specified number of iterations and produces the correct final output based on the loop pipeline's logic and the fixed parameters provided for the iterations.
+        """
+        loop_p = Pipeline("loop")
+        loop_p.add_node(Node("inc", lambda loop_var: loop_var + 1),
+                        predecessors={'loop_var': 'run_params:loop_var'})
+        p = Pipeline("main")
+        p.add_node(NodeFor("for_node", loop_p, fixed_params={'iterations': 3}),
+                   predecessors={'loop_var': 'run_params:start'})
+        _, outputs, _ = p.run({'start': 0})
+        assert outputs['for_node'] == 3
+
+    def test_run_nodewhile_in_pipeline(self):
+        """
+        Tests the execution of the pipeline with a NodeWhile, ensuring that the loop executes until the condition is no longer met and produces the correct final output based on the loop pipeline's logic and the fixed parameters provided for the iterations.
+        """
+        loop_p = Pipeline("loop")
+        loop_p.add_node(Node("inc", lambda loop_var: loop_var + 1),
+                        predecessors={'loop_var': 'run_params:loop_var'})
+        p = Pipeline("main")
+        p.add_node(NodeWhile("while_node", lambda loop_var: loop_var < 5, loop_p),
+                   predecessors={'loop_var': 'run_params:start'})
+        _, outputs, _ = p.run({'start': 0})
+        assert outputs['while_node'] == 5
+
+
     def test_run_with_loop(self, loop_pipeline):
         """        
         Tests the execution of the pipeline with a looping node.
@@ -222,6 +303,63 @@ class TestPipelineRun:
         assert 'add' in outputs
         assert 'mul' in outputs
         assert outputs['add'] == 8
+
+    def test_run_optimize_memory_removes_intermediate_outputs(self, basic_pipeline):
+        """
+        Tests the execution of the pipeline with optimize_memory=True, ensuring that intermediate node outputs 
+        are not included in the returned outputs dictionary, while still providing the final outputs of the pipeline execution. 
+        """
+        _, outputs, _ = basic_pipeline.run({'x': 5, 'y': 3}, optimize_memory=True)
+        assert 'add' not in outputs
+        assert outputs['mul'] == 80
+
+
+    def test_run_debug_mode_prints_node_names(self, basic_pipeline, capsys):
+        """
+        Tests that running the pipeline in debug mode prints the names of the nodes as they are executed.
+        """
+        basic_pipeline.run({'x': 1, 'y': 2}, debug=True)
+        out = capsys.readouterr().out
+        assert "add" in out
+        assert "mul" in out
+
+    def test_run_skip_failed_loop_continues_on_error(self):
+        """
+        Tests that when skip_failed_loop is True, if an iteration of a loop node raises an exception, 
+        the pipeline continues executing the remaining iterations and completes the run without crashing, while skipping the failed iteration's output.
+        """
+        def fail_on_two(a, b):
+            if a == 2:
+                raise ValueError("fail on 2")
+            return a + b
+
+        p = Pipeline("test")
+        p.add_node(Node("data", lambda: [1, 2, 3]))
+        p.add_node(Node("proc", fail_on_two, fixed_params={'b': 10}),
+                   predecessors={'[a]': 'data'})
+        _, outputs, _ = p.run(skip_failed_loop=True)
+        assert 2 not in outputs['proc']
+        assert 11 in outputs['proc']    # 1 + 10
+        assert 13 in outputs['proc']    # 3 + 10
+
+    def test_run_returns_timing_info(self, basic_pipeline):
+        """
+        Tests that the run method returns timing information for the total execution time and individual node execution times.
+        """
+        _, _, (total_time, node_times) = basic_pipeline.run({'x': 1, 'y': 2})
+        assert total_time >= 0
+        assert set(node_times.keys()) == {'add', 'mul'}
+
+    def test_run_multiple_inputs_curly_syntax(self):
+        """
+        Tests the {param} syntax for fan-out over the source node's output list.
+        """
+        p = Pipeline("multi")
+        p.add_node(Node("src", lambda: [1, 2]))
+        p.add_node(Node("double", lambda a: a * 10),
+                   predecessors={'{a}': 'src'})
+        _, outputs, _ = p.run()
+        assert outputs['double'] == [10, 20]
 
 
 class TestPipelineSerialization:
@@ -281,6 +419,21 @@ class TestPipelineSerialization:
         last_node_id, outputs, _ = reconstructed_pipeline.run(run_params={'x': 5, 'y': 3})
         assert last_node_id == "mul"
         assert outputs['mul'] == 80
+    
+    def test_default_resolver_lambda_raises_import_error(self):
+        """
+        Tests that the default function resolver raises an ImportError when trying to resolve a lambda function.
+        """
+        with pytest.raises(ImportError, match="lambda"):
+            Pipeline._default_function_resolver("mymodule.<lambda>")
+
+    def test_default_resolver_missing_function_raises(self):
+        """
+        Tests that the default function resolver raises an ImportError when trying to resolve a non-existent function.
+        """
+        with pytest.raises((ImportError, AttributeError)):
+            Pipeline._default_function_resolver("os.nonexistent_xyz_abc")
+
 
 class TestPipelineMultiOutput:
     def test_run_multi_output_by_key(self, add_func):
@@ -304,3 +457,23 @@ class TestPipelineMultiOutput:
         last_node_id, outputs, _ = p.run()
         assert last_node_id == "add"
         assert outputs['add'] == 30
+
+class TestPipelineClearMemory:
+    def test_clear_memory_forces_recomputation(self):
+        """
+        Tests that clear_memory forces recomputation of node outputs on subsequent runs, ensuring that cached results are invalidated and 
+        the pipeline re-executes nodes to produce new outputs after memory is cleared.
+        """
+        call_count = [0]
+        def counting(x):
+            call_count[0] += 1
+            return x * 2
+
+        p = Pipeline("test")
+        p.add_node(Node("n", counting), predecessors={'x': 'run_params:val'})
+        p.run({'val': 5})
+        p.run({'val': 5})
+        assert call_count[0] == 1   # cached on second run
+        p.clear_memory()
+        p.run({'val': 5})
+        assert call_count[0] == 2   # re-executes after clear

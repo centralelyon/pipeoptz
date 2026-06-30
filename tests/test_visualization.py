@@ -4,7 +4,7 @@ import sys
 import os
 sys.path.append(os.path.abspath("../src/"))
 from pipeoptz.pipeline import Pipeline
-from pipeoptz.node import Node, NodeIf
+from pipeoptz.node import Node, NodeIf, NodeFor, NodeWhile
 from pipeoptz.visualization import Visualizer
 
 
@@ -54,6 +54,28 @@ def node_if_pipeline(identity_func):
         false_pipeline=false_pipe
     )
     p.add_node(node_if, predecessors={'condition_func:c': 'start', 'val': 'start'})
+    return p
+
+
+@pytest.fixture
+def node_for_pipeline():
+    loop_p = Pipeline("loop")
+    loop_p.add_node(Node("inc", lambda loop_var: loop_var + 1),
+                    predecessors={'loop_var': 'run_params:loop_var'})
+    p = Pipeline("with_for")
+    p.add_node(NodeFor("for_node", loop_p, fixed_params={'iterations': 3}),
+               predecessors={'loop_var': 'run_params:start'})
+    return p
+
+
+@pytest.fixture
+def node_while_pipeline():
+    loop_p = Pipeline("loop")
+    loop_p.add_node(Node("inc", lambda loop_var: loop_var + 1),
+                    predecessors={'loop_var': 'run_params:loop_var'})
+    p = Pipeline("with_while")
+    p.add_node(NodeWhile("while_node", lambda loop_var: loop_var < 5, loop_p),
+               predecessors={'loop_var': 'run_params:start'})
     return p
 
 
@@ -148,3 +170,174 @@ class TestVisualizer:
         """
         from pipeoptz import Visualizer as VisualizerImported
         assert VisualizerImported is Visualizer
+
+
+# ─── NodeFor visualization ───────────────────────────────────────────────────
+class TestVisualizerNodeFor:
+    def test_to_dot_contains_for_loop_label(self, node_for_pipeline):
+        """
+        Tests that the to_dot method includes the for loop label.
+        """
+        dot = node_for_pipeline.to_dot()
+        assert "For Loop" in dot
+        assert "Mdiamond" in dot
+
+    def test_to_dot_contains_loop_edges(self, node_for_pipeline):
+        """
+        Tests that the to_dot method includes edges for the loop structure.
+        """
+        dot = node_for_pipeline.to_dot()
+        assert "start" in dot
+        assert "next" in dot
+
+    def test_to_dot_for_output_node_present(self, node_for_pipeline):
+        """
+        Tests that the to_dot method includes a node for the for loop output.
+        """
+        dot = node_for_pipeline.to_dot()
+        assert "for_node_output" in dot
+
+    def test_to_mermaid_contains_for_loop_label(self, node_for_pipeline):
+        """
+        Tests that the to_mermaid method includes the for loop label.
+        """
+        mermaid = node_for_pipeline.to_mermaid()
+        assert "For Loop" in mermaid
+        assert "-->|start|" in mermaid
+
+    def test_to_mermaid_for_output_node_present(self, node_for_pipeline):
+        """
+        Tests that the to_mermaid method includes a node for the for loop output.
+        """
+        mermaid = node_for_pipeline.to_mermaid()
+        assert "for_node_output" in mermaid or "For Output" in mermaid
+
+
+# ─── NodeWhile visualization ─────────────────────────────────────────────────
+
+class TestVisualizerNodeWhile:
+    def test_to_dot_contains_while_loop_label(self, node_while_pipeline):
+        """
+        Tests that the to_dot method includes the while loop label.
+        """
+        dot = node_while_pipeline.to_dot()
+        assert "While Loop" in dot
+        assert "Mdiamond" in dot
+
+    def test_to_dot_while_output_node_present(self, node_while_pipeline):
+        """
+        Tests that the to_dot method includes a node for the while loop output.
+        """
+        dot = node_while_pipeline.to_dot()
+        assert "while_node_output" in dot
+
+    def test_to_mermaid_contains_while_loop_label(self, node_while_pipeline):
+        """
+        Tests that the to_mermaid method includes the while loop label.
+        """
+        mermaid = node_while_pipeline.to_mermaid()
+        assert "While Loop" in mermaid
+
+    def test_to_mermaid_while_output_node_present(self, node_while_pipeline):
+        """
+        Tests that the to_mermaid method includes a node for the while loop output.
+        """
+        mermaid = node_while_pipeline.to_mermaid()
+        assert "while_node_output" in mermaid or "While Output" in mermaid
+
+
+# ─── Visualizer helper methods ───────────────────────────────────────────────
+
+class TestVisualizerHelpers:
+    def test_mermaid_id_empty_string_returns_node(self):
+        """
+        Tests that the _mermaid_id method returns 'node' when given an empty string.
+        """
+        assert Visualizer._mermaid_id("") == "node"
+
+    def test_mermaid_id_digit_start_gets_prefix(self):
+        """
+        Tests that the _mermaid_id method adds a prefix when the input starts with a digit.
+        """
+        result = Visualizer._mermaid_id("123node")
+        assert result.startswith("n_")
+
+    def test_mermaid_id_special_chars_replaced(self):
+        """
+        Tests that the _mermaid_id method replaces special characters with underscores.
+        """
+        result = Visualizer._mermaid_id("node-id with space")
+        assert "-" not in result
+        assert " " not in result
+
+    def test_mermaid_id_with_prefix(self):
+        """
+        Tests that the _mermaid_id method correctly applies a custom prefix when the input starts with a digit.
+        """
+        result = Visualizer._mermaid_id("step", prefix="sub_")
+        assert result.startswith("sub_")
+
+    def test_function_label_lambda(self):
+        """
+        Tests that the _function_label method returns 'lambda' for lambda functions.
+        """
+        node = Node("n", lambda x: x)
+        assert Visualizer._function_label(node) == "lambda"
+
+    def test_function_label_main_module(self):
+        """
+        Tests that the _function_label method returns just the function name for functions defined in the __main__ module.
+        """
+        def my_func(x):
+            return x
+        my_func.__module__ = "__main__"
+        node = Node("n", my_func)
+        assert Visualizer._function_label(node) == "my_func"
+
+    def test_function_label_external_module(self):
+        """
+        Tests that the _function_label method returns the full module and function name for functions defined in external modules.
+        """
+        def my_func(x):
+            return x
+        my_func.__module__ = "mypackage.mymodule"
+        node = Node("n", my_func)
+        assert Visualizer._function_label(node) == "mypackage.mymodule.my_func"
+
+    def test_to_dot_show_function_false_omits_func_details(self, basic_pipeline):
+        """
+        Tests that the to_dot method omits function details when show_function is set to False.
+        """
+        dot_with = basic_pipeline.to_dot(show_function=True)
+        dot_without = basic_pipeline.to_dot(show_function=False)
+        # With show_function=False the DOT should be shorter (no func labels)
+        assert len(dot_without) < len(dot_with)
+
+    def test_to_dot_run_params_rendered_as_ellipse(self, basic_pipeline):
+        """
+         Tests that run_params edges are shown as dashed ellipses labelled by the input param name.
+         """
+        dot = basic_pipeline.to_dot()
+        assert "shape=ellipse" in dot
+        # The basic_pipeline has predecessors {'a': 'run_params:x', 'b': 'run_params:y'},
+        # so param nodes are labelled by the input key ('a', 'b'), not the source key.
+        assert "params_a" in dot
+        assert "params_b" in dot
+
+    def test_to_mermaid_saves_to_file(self, basic_pipeline, tmp_path):
+        """
+        Tests that the to_mermaid method saves the Mermaid diagram to a file when a filepath is provided, and that the file contains the expected Mermaid syntax.
+        """
+        fp = tmp_path / "graph.mmd"
+        basic_pipeline.to_mermaid(str(fp))
+        assert fp.exists()
+        assert "flowchart TD" in fp.read_text()
+
+    def test_to_dot_saves_to_file(self, basic_pipeline, tmp_path):
+        """
+        Tests that the to_dot method saves the DOT diagram to a file when a filepath is provided, and that the file contains the expected DOT syntax.
+        """
+        fp = tmp_path / "graph.dot"
+        basic_pipeline.to_dot(str(fp))
+        assert fp.exists()
+        assert "digraph Pipeline" in fp.read_text()
