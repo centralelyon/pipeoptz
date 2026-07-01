@@ -3,7 +3,7 @@
 from __future__ import annotations
 import random as rd
 import warnings
-from typing import Any, Callable, Dict, Optional, List, Tuple
+from typing import Any, Callable, Dict, Iterable, Optional, List, Tuple, Union
 
 import numpy as np
 from scipy.stats import norm
@@ -15,6 +15,7 @@ from sklearn.exceptions import ConvergenceWarning
 from .parameter import IntParameter, FloatParameter, ChoiceParameter, \
                     BoolParameter, MultiChoiceParameter, Parameter
 from .pipeline import Pipeline, _product
+from .callback import Callback, _CallbackList
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
@@ -57,6 +58,40 @@ class PipelineOptimizer:
         self.max_time_pipeline: float = max_time_pipeline
         self.loss: Callable[..., float] = loss_function
         self.best_params_history: List[Dict[str, Any]] = []
+        self._callbacks = _CallbackList()
+        self._evaluation_count = 0
+
+    def _on_iteration_begin(
+        self, method: str, iteration: int, total: int, unit: str = "iteration"
+    ) -> None:
+        """Notify callbacks that an optimization iteration is starting."""
+        self._callbacks.call(
+            "on_iteration_begin",
+            iteration,
+            logs={"method": method, "total_iterations": total, "unit": unit},
+        )
+
+    def _on_iteration_end(
+        self,
+        method: str,
+        iteration: int,
+        total: int,
+        best_loss: float,
+        best_params: Dict[str, Any],
+        unit: str = "iteration",
+    ) -> None:
+        """Notify callbacks that an optimization iteration has finished."""
+        self._callbacks.call(
+            "on_iteration_end",
+            iteration,
+            logs={
+                "method": method,
+                "total_iterations": total,
+                "unit": unit,
+                "best_loss": float(best_loss),
+                "best_params": best_params.copy(),
+            },
+        )
 
     def add_param(self, param: Parameter) -> None:
         """Adds a parameter to the list of parameters that the optimizer will tune."""
@@ -128,6 +163,16 @@ class PipelineOptimizer:
             y_negative (list, optional): A list of negative examples for some loss functions. 
                 Defaults to None.
         """
+        evaluation = self._evaluation_count
+        self._evaluation_count += 1
+        evaluation_logs = {
+            "params": self.get_params_value().copy(),
+            "sample_count": len(X),
+        }
+        self._callbacks.call(
+            "on_evaluation_begin", evaluation, logs=evaluation_logs.copy()
+        )
+
         self.update_pipeline_params()
         is_triplet_loss = y_negative is not None
 
@@ -142,8 +187,20 @@ class PipelineOptimizer:
             else:
                 loss += self.loss(results[-1], y[i])
             if self.max_time_pipeline != 0 and t[0] > self.max_time_pipeline:
-                return results+[None]*(len(X)-i-1), float("inf")
+                results += [None] * (len(X) - i - 1)
+                loss = float("inf")
+                self._callbacks.call(
+                    "on_evaluation_end",
+                    evaluation,
+                    logs={**evaluation_logs, "loss": loss, "timed_out": True},
+                )
+                return results, loss
         loss /= len(X)
+        self._callbacks.call(
+            "on_evaluation_end",
+            evaluation,
+            logs={**evaluation_logs, "loss": float(loss), "timed_out": False},
+        )
         return results, loss
 
     def plot_convergence(self) -> np.ndarray:
@@ -260,6 +317,7 @@ class PipelineOptimizer:
         loss_log = []
 
         for i in range(iterations):
+            self._on_iteration_begin("ACO", i, iterations)
             if verbose:
                 print(f"Iteration {i+1}/{iterations}", end="\r")
             solutions = []
@@ -303,6 +361,7 @@ class PipelineOptimizer:
                 pheromones[name][val] += 1.0 / (1.0 + losses[best_idx])
 
             loss_log.append(best_loss)
+            self._on_iteration_end("ACO", i, iterations, best_loss, best_params)
 
         self.set_params(best_params)
         self.update_pipeline_params()
@@ -339,6 +398,7 @@ class PipelineOptimizer:
         loss_log = []
 
         for i in range(iterations):
+            self._on_iteration_begin("SA", i, iterations)
             if verbose:
                 print(f"Iteration {i+1}/{iterations}", end="\r")
             candidate = current_params.copy()
@@ -362,6 +422,7 @@ class PipelineOptimizer:
             self.best_params_history.append(best_params.copy())
             loss_log.append(best_loss)
             temperature *= cooling_rate
+            self._on_iteration_end("SA", i, iterations, best_loss, best_params)
 
         self.set_params(best_params)
         self.update_pipeline_params()
@@ -413,45 +474,47 @@ class PipelineOptimizer:
         self.best_params_history.append(best_particle.copy())
 
         for i in range(iterations):
+            self._on_iteration_begin("PSO", i, iterations)
             if verbose:
                 print(f"Iteration {i+1}/{iterations}", end="\r")
-            for i in range(swarm_size):
+            for particle_index in range(swarm_size):
                 new_particle = {}
                 for name in param_names:
                     r1, r2 = rd.random(), rd.random()
-                    p_val = particles[i][name]
-                    pb_val = personal_best[i][name]
+                    p_val = particles[particle_index][name]
+                    pb_val = personal_best[particle_index][name]
                     gb_val = best_particle[name]
 
                     if p_val != pb_val:
-                        velocities[i][name] = cognitive * r1
+                        velocities[particle_index][name] = cognitive * r1
                     elif p_val != gb_val:
-                        velocities[i][name] += social * r2
+                        velocities[particle_index][name] += social * r2
                     else:
-                        velocities[i][name] *= inertia
+                        velocities[particle_index][name] *= inertia
 
-                    if rd.random() < velocities[i][name]:
+                    if rd.random() < velocities[particle_index][name]:
                         param = next(p for p in self.params_to_optimize \
                                      if f"{p.node_id}.{p.param_name}" == name)
                         new_particle[name] = param.get_random_value()
                     else:
-                        new_particle[name] = particles[i][name]
+                        new_particle[name] = particles[particle_index][name]
 
                 self.set_params(new_particle)
                 _, loss = self.evaluate(X, y, y_negative)
 
-                if loss < personal_best_loss[i]:
-                    personal_best[i] = new_particle.copy()
-                    personal_best_loss[i] = loss
+                if loss < personal_best_loss[particle_index]:
+                    personal_best[particle_index] = new_particle.copy()
+                    personal_best_loss[particle_index] = loss
 
                     if loss < best_loss:
                         best_loss = loss
                         best_particle = new_particle.copy()
 
-                particles[i] = new_particle
+                particles[particle_index] = new_particle
 
             self.best_params_history.append(best_particle.copy())
             loss_log.append(best_loss)
+            self._on_iteration_end("PSO", i, iterations, best_loss, best_particle)
 
         self.set_params(best_particle)
         self.update_pipeline_params()
@@ -509,6 +572,7 @@ class PipelineOptimizer:
         self.best_params_history.append(best_individual.copy())
 
         for gen in range(generations):
+            self._on_iteration_begin("GA", gen, generations, unit="generation")
             if verbose:
                 print(f"Generation {gen+1}/{generations}", end="\r")
             new_population = []
@@ -535,6 +599,9 @@ class PipelineOptimizer:
 
             self.best_params_history.append(best_individual.copy())
             loss_log.append(best_loss)
+            self._on_iteration_end(
+                "GA", gen, generations, best_loss, best_individual, unit="generation"
+            )
 
         self.set_params(best_individual)
         self.update_pipeline_params()
@@ -586,6 +653,7 @@ class PipelineOptimizer:
         loss_log = []
 
         for i, combo in enumerate(combinations):
+            self._on_iteration_begin("GS", i, max_combinations)
             if verbose:
                 print(f"Iteration {i+1}/{max_combinations}", end="\r")
             params = dict(zip(param_names, combo))
@@ -598,6 +666,7 @@ class PipelineOptimizer:
 
             self.best_params_history.append(best_params.copy())
             loss_log.append(best_loss)
+            self._on_iteration_end("GS", i, max_combinations, best_loss, best_params)
 
         self.set_params(best_params)
         self.update_pipeline_params()
@@ -714,6 +783,7 @@ class PipelineOptimizer:
         loss_log = []
 
         for i in range(iterations):
+            self._on_iteration_begin("BO", i, iterations)
             if verbose:
                 print(f"Iteration {i+1}/{iterations}", end="\r")
             gp.fit(X, Y)
@@ -748,6 +818,13 @@ class PipelineOptimizer:
 
             self.best_params_history.append(self._decode(best_x_raw, param_defs))
             loss_log.append(best_loss)
+            self._on_iteration_end(
+                "BO",
+                i,
+                iterations,
+                best_loss,
+                self._decode(best_x_raw, param_defs),
+            )
 
         best_params = self._decode(best_x_raw, param_defs)
         self.set_params(best_params)

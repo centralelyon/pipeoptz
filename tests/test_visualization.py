@@ -2,6 +2,8 @@
 import pytest
 import sys
 import os
+import subprocess
+from unittest.mock import patch
 sys.path.append(os.path.abspath("../src/"))
 from pipeoptz.pipeline import Pipeline
 from pipeoptz.node import Node, NodeIf, NodeFor, NodeWhile
@@ -130,6 +132,35 @@ class TestVisualizer:
         visualizer = Visualizer(basic_pipeline)
         visualizer_dot_string = visualizer.to_dot()
         assert dot_string == visualizer_dot_string
+
+    def test_to_image_regenerates_missing_dot_when_png_exists(self, basic_pipeline, tmp_path):
+        """An existing PNG must not prevent regeneration of its temporary DOT file."""
+        image_path = tmp_path / "graph.png"
+        dot_path = tmp_path / "graph.dot"
+        image_path.write_bytes(b"existing image")
+
+        def successful_dot(command, **kwargs):
+            assert command[-1] == str(dot_path)
+            assert dot_path.exists()
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch("pipeoptz.visualization.subprocess.run", side_effect=successful_dot):
+            basic_pipeline.to_image(str(image_path))
+
+        assert not dot_path.exists()
+
+    def test_to_image_includes_graphviz_error(self, basic_pipeline, tmp_path):
+        """Graphviz diagnostics should be included in the public error."""
+        image_path = tmp_path / "graph.png"
+        error = subprocess.CalledProcessError(
+            2,
+            ["dot"],
+            stderr="Error: dot: can't open graph.dot",
+        )
+
+        with patch("pipeoptz.visualization.subprocess.run", side_effect=error):
+            with pytest.raises(RuntimeError, match="can't open graph.dot"):
+                basic_pipeline.to_image(str(image_path))
 
     def test_visualizer_to_mermaid_generates_string(self, basic_pipeline):
         """

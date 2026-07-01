@@ -366,22 +366,28 @@ class Visualizer:
     def to_image(self, filepath: str, dpi: int = 160,
                  add_optz: bool = False, show_function: bool = True) -> None:
         """Generates a PNG image of the pipeline graph using Graphviz."""
-        delete = False
-        if filepath is None or not os.path.exists(filepath):
-            self.to_dot(os.path.splitext(filepath)[0] + ".dot",
-                        add_optz=add_optz, show_function=show_function)
-            delete = True
-        try:
-            res = subprocess.run(
-                ["dot", "-Tpng", f"-Gdpi={int(dpi)}", "-o", filepath,
-                 os.path.splitext(filepath)[0] + ".dot"],
-                check=True,
-            )
+        dot_filepath = os.path.splitext(filepath)[0] + ".dot"
+        delete_dot = not os.path.exists(dot_filepath)
+        self.to_dot(dot_filepath, add_optz=add_optz, show_function=show_function)
 
-        except Exception as e:
-            raise RuntimeError("Error during PNG generation.\n"+
-                               "Do you have graphviz installed?") from e
-        if res.returncode != 0:
-            print("Error during PNG generation")
-        if delete:
-            os.remove(os.path.splitext(filepath)[0] + ".dot")
+        try:
+            subprocess.run(
+                ["dot", "-Tpng", f"-Gdpi={int(dpi)}", "-o", filepath,
+                 dot_filepath],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError as e:
+            raise RuntimeError(
+                "Error during PNG generation: the Graphviz 'dot' executable "
+                "was not found. Install Graphviz and ensure 'dot' is on PATH."
+            ) from e
+        except subprocess.CalledProcessError as e:
+            details = (e.stderr or e.stdout or str(e)).strip()
+            raise RuntimeError(
+                f"Error during PNG generation. Graphviz reported:\n{details}"
+            ) from e
+
+        if delete_dot:
+            os.remove(dot_filepath)
