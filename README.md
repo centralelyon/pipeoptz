@@ -25,26 +25,43 @@ The package is provided with a `LICENSE` file which contains the license terms.
 
 ## Installation
 
-### Installation from PyPi
-The easiest way to install PipeOptz is through pip. Open your terminal and run the follwing command:
+### Installation from PyPI
+
+The easiest way to install PipeOptz is with `pip`:
 
 ```bash
 pip install --upgrade --user pipeoptz
 ```
 
 ### Installation from source
+
 If you're reading this `README` from a source distribution, you can install PipeOptz after downloading it with:
 
 ```bash
 pip install --upgrade --user .
 ```
 
-You can also install the latest development version directly from Github:
+You can also install the latest development version directly from GitHub:
+
 ```bash
 pip install --upgrade --user https://github.com/centralelyon/pipeoptz/archive/main.zip
 ```
 
-For local development install PipeOptz in editable mode:
+For local development, install PipeOptz in editable mode with its development dependencies:
+
+```bash
+pip install --editable ".[dev]"
+```
+
+### Checking the installed version
+
+The installed PipeOptz version is available as `pipeoptz.__version__`:
+
+```python
+import pipeoptz
+
+print(pipeoptz.__version__)
+```
 
 ## Quick Start
 
@@ -65,13 +82,13 @@ pipeline = Pipeline(name="arithmetic_pipeline")
 
 # 3. Create nodes and add them to the pipeline with dependencies
 # Node A: 5 + 3 = 8
-pipeline.add_node(Node(id="A", func=add, fixed_params={"x": 5, "y": 3}))
+pipeline.add_node(Node(node_id="A", func=add, fixed_params={"x": 5, "y": 3}))
 
 # Node B: Takes the output of A as input -> 8 * 10 = 80
-pipeline.add_node(Node(id="B", func=multiply, fixed_params={"b": 10}), predecessors={"a": "A"})
+pipeline.add_node(Node(node_id="B", func=multiply, fixed_params={"b": 10}), predecessors={"a": "A"})
 
 # Node C: Takes the output of B as input -> 80 + 1 = 81
-pipeline.add_node(Node(id="C", func=add, fixed_params={"y": 1}), predecessors={"x": "B"})
+pipeline.add_node(Node(node_id="C", func=add, fixed_params={"y": 1}), predecessors={"x": "B"})
 
 
 # 4. Run the pipeline
