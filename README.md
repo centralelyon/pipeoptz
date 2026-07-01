@@ -166,6 +166,7 @@ Available hooks are `on_optimization_begin`, `on_optimization_end`,
 ## Examples
 Several example pipelines are provided in the `examples/` directory. These include:
 -   `basic/`: A simple pipeline with arithmetic operations.
+-   `callback/`: Standalone completion and step-by-step optimization callbacks.
 -   `cond/`: A pipeline demonstrating conditional branching.
 -   `for/`: A pipeline demonstrating for loops.
 -   `while/`: A pipeline demonstrating while loops.
