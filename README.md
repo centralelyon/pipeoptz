@@ -130,13 +130,46 @@ To do this, you would:
 
 For a complete, runnable optimization example, please see the Jupyter Notebook at: **`examples/advanced/simple.ipynb`**.
 
+### Monitoring optimization with callbacks
+
+Subclass `Callback` to observe an optimization run. Callbacks receive the optimizer
+through `self.optimizer` and lifecycle data through the `logs` dictionary.
+
+```python
+from pipeoptz import Callback
+
+
+class ProgressCallback(Callback):
+    def on_optimization_begin(self, logs=None):
+        print(f"Starting {logs['method']}")
+
+    def on_iteration_end(self, iteration, logs=None):
+        print(f"Iteration {iteration + 1}: loss={logs['best_loss']:.4f}")
+
+    def on_optimization_end(self, logs=None):
+        print(f"Optimization {logs['status']}")
+
+
+best_params, loss_log = optimizer.optimize(
+    X,
+    y,
+    method="GA",
+    generations=50,
+    callbacks=[ProgressCallback()],
+)
+```
+
+Available hooks are `on_optimization_begin`, `on_optimization_end`,
+`on_iteration_begin`, `on_iteration_end`, `on_evaluation_begin`, and
+`on_evaluation_end`. Iteration and evaluation indexes are zero-based.
+
 ## Examples
 Several example pipelines are provided in the `examples/` directory. These include:
 -   `basic/`: A simple pipeline with arithmetic operations.
 -   `cond/`: A pipeline demonstrating conditional branching.
 -   `for/`: A pipeline demonstrating for loops.
 -   `while/`: A pipeline demonstrating while loops.
--   `opti/`: A pipeline demonstrating optimization pipeline with tunable parameters.ù
+-   `opti/`: A pipeline demonstrating optimization with tunable parameters.
 
 ## Docker
 

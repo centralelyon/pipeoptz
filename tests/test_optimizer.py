@@ -9,6 +9,7 @@ import sys
 import os
 sys.path.append(os.path.abspath("../src/"))
 from pipeoptz.optimizer import PipelineOptimizer
+from pipeoptz.callback import Callback
 from pipeoptz.pipeline import Pipeline
 from pipeoptz.node import Node
 from pipeoptz.parameter import (
@@ -18,6 +19,32 @@ from pipeoptz.parameter import (
     BoolParameter,
     MultiChoiceParameter
 )
+
+
+class RecordingCallback(Callback):
+    """Record callback invocations for lifecycle assertions."""
+
+    def __init__(self):
+        super().__init__()
+        self.events = []
+
+    def on_optimization_begin(self, logs=None):
+        self.events.append(("optimization_begin", None, dict(logs or {})))
+
+    def on_optimization_end(self, logs=None):
+        self.events.append(("optimization_end", None, dict(logs or {})))
+
+    def on_iteration_begin(self, iteration, logs=None):
+        self.events.append(("iteration_begin", iteration, dict(logs or {})))
+
+    def on_iteration_end(self, iteration, logs=None):
+        self.events.append(("iteration_end", iteration, dict(logs or {})))
+
+    def on_evaluation_begin(self, evaluation, logs=None):
+        self.events.append(("evaluation_begin", evaluation, dict(logs or {})))
+
+    def on_evaluation_end(self, evaluation, logs=None):
+        self.events.append(("evaluation_end", evaluation, dict(logs or {})))
 
 # --- Fixtures and Helpers ---
 
@@ -242,6 +269,90 @@ class TestOptimizerMethods:
         # Unknown method should fail
         with pytest.raises(ValueError, match="Unknown optimization method: UNKNOWN"):
             optimizer_instance.optimize(X, y, method="UNKNOWN")
+
+
+class TestOptimizerCallbacks:
+    def test_callback_is_exported_from_package(self):
+        from pipeoptz import Callback as ExportedCallback
+
+        assert ExportedCallback is Callback
+
+    def test_callback_lifecycle_and_logs(self, optimizer_instance, sample_data):
+        X, y, _ = sample_data
+        callback = RecordingCallback()
+
+        best_params, loss_log = optimizer_instance.optimize(
+            X,
+            y,
+            method="GS",
+            max_combinations=3,
+            param_sampling=2,
+            callbacks=[callback],
+        )
+
+        event_names = [event[0] for event in callback.events]
+        assert event_names[0] == "optimization_begin"
+        assert event_names[-1] == "optimization_end"
+        assert event_names.count("iteration_begin") == len(loss_log)
+        assert event_names.count("iteration_end") == len(loss_log)
+        assert event_names.count("evaluation_begin") == len(loss_log)
+        assert event_names.count("evaluation_end") == len(loss_log)
+        assert callback.optimizer is optimizer_instance
+        assert callback.params["method"] == "GS"
+        assert callback.params["max_combinations"] == 3
+
+        end_logs = callback.events[-1][2]
+        assert end_logs["status"] == "completed"
+        assert end_logs["best_params"] == best_params
+        assert end_logs["best_loss"] == loss_log[-1]
+
+        iteration_ends = [event for event in callback.events if event[0] == "iteration_end"]
+        assert [event[1] for event in iteration_ends] == list(range(len(loss_log)))
+        assert all("best_loss" in event[2] for event in iteration_ends)
+        assert all("best_params" in event[2] for event in iteration_ends)
+
+    @pytest.mark.parametrize("method,kwargs", [
+        ("ACO", {"iterations": 2, "ants": 2, "param_sampling": 2}),
+        ("SA", {"iterations": 2}),
+        ("PSO", {"iterations": 2, "swarm_size": 2}),
+        ("GA", {"generations": 2, "population_size": 3}),
+        ("GS", {"max_combinations": 2, "param_sampling": 2}),
+        ("BO", {"iterations": 2, "init_points": 2, "n_candidates": 4}),
+    ])
+    def test_iteration_hooks_cover_every_strategy(
+        self, optimizer_instance, sample_data, method, kwargs
+    ):
+        X, y, _ = sample_data
+        callback = RecordingCallback()
+
+        _, loss_log = optimizer_instance.optimize(
+            X, y, method=method, callbacks=callback, **kwargs
+        )
+
+        iteration_ends = [event for event in callback.events if event[0] == "iteration_end"]
+        assert len(iteration_ends) == len(loss_log)
+        assert all(event[2]["method"] == method for event in iteration_ends)
+
+    def test_failed_optimization_notifies_callback(self, optimizer_instance, sample_data):
+        X, y, _ = sample_data
+        callback = RecordingCallback()
+
+        with patch.object(
+            optimizer_instance, "optimize_GS", side_effect=RuntimeError("strategy failed")
+        ):
+            with pytest.raises(RuntimeError, match="strategy failed"):
+                optimizer_instance.optimize(X, y, method="GS", callbacks=[callback])
+
+        assert callback.events[0][0] == "optimization_begin"
+        assert callback.events[-1][0] == "optimization_end"
+        assert callback.events[-1][2]["status"] == "failed"
+        assert isinstance(callback.events[-1][2]["exception"], RuntimeError)
+
+    def test_invalid_callback_is_rejected(self, optimizer_instance, sample_data):
+        X, y, _ = sample_data
+
+        with pytest.raises(TypeError, match="Callback instances"):
+            optimizer_instance.optimize(X, y, method="GS", callbacks=[object()])
 
 
 class TestOptimizerHelpers:

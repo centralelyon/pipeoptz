@@ -833,12 +833,16 @@ class PipelineOptimizer:
 
     def optimize(self, X: List[Dict[str, Any]],
                  y: List[Any], y_negative: Optional[List[Any]] = None,
-                 method: str = "BO", **kwargs: Any) -> Tuple[Dict[str, Any], List[float]]:
+                 method: str = "BO",
+                 callbacks: Optional[Union[Callback, Iterable[Callback]]] = None,
+                 **kwargs: Any) -> Tuple[Dict[str, Any], List[float]]:
         """
         Optimizes the pipeline using the specified method.
 
         Args:
             method (str): The optimization method to use (e.g., "GS", "BO", "ACO", "SA", "GA").
+            callbacks (Callback or iterable of Callback, optional): Lifecycle callbacks
+                invoked during optimization.
             **kwargs: Additional arguments for the chosen optimization method.
 
         Returns:
@@ -854,7 +858,34 @@ class PipelineOptimizer:
                 "All items in X must be dictionaries"
 
         optimizer_method = getattr(self, f"optimize_{method}", None)
-        if optimizer_method and callable(optimizer_method):
-            return optimizer_method(X, y, y_negative, **kwargs)
-        else:
+        if not optimizer_method or not callable(optimizer_method):
             raise ValueError(f"Unknown optimization method: {method}")
+
+        callback_params = {"method": method, **kwargs}
+        self._callbacks = _CallbackList(callbacks, self, callback_params)
+        self._evaluation_count = 0
+
+        try:
+            self._callbacks.call(
+                "on_optimization_begin", logs={"method": method, "status": "running"}
+            )
+            best_params, loss_log = optimizer_method(X, y, y_negative, **kwargs)
+        except Exception as error:
+            self._callbacks.call(
+                "on_optimization_end",
+                logs={"method": method, "status": "failed", "exception": error},
+            )
+            raise
+        else:
+            self._callbacks.call(
+                "on_optimization_end",
+                logs={
+                    "method": method,
+                    "status": "completed",
+                    "best_params": best_params.copy(),
+                    "best_loss": float(loss_log[-1]) if loss_log else float("inf"),
+                },
+            )
+            return best_params, loss_log
+        finally:
+            self._callbacks = _CallbackList()
