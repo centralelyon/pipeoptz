@@ -39,6 +39,10 @@ dev = [
     "ruff",
     "pytest-cov"
 ]
+docs = [
+    "mkdocs-material",
+    "mkdocstrings[python]"
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

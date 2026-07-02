@@ -203,7 +203,13 @@ This will mount your current directory to `/workspace` inside the container.
 
 ## Building Docs
 
-This project uses [MkDocs](https://www.mkdocs.org/) to generate documentation.
+This project uses [MkDocs Material](https://squidfunk.github.io/mkdocs-material/)
+and `mkdocstrings` to generate documentation. Install the documentation
+dependencies with:
+
+```bash
+pip install --editable ".[docs]"
+```
 
 To serve the documentation locally, run the following command from the root of the project:
 
@@ -212,6 +218,12 @@ mkdocs serve
 ```
 
 This will start a local server, and you can view the documentation by opening your browser to `http://127.0.0.1:8000`.
+
+To verify the documentation without starting a server:
+
+```bash
+mkdocs build --strict
+```
 
 ## Testing
 PipeOptz makes use of pytest for its test suite.

@@ -28,3 +28,19 @@ jobs:
       run: ruff check . --exclude examples
     - name: Run tests with coverage
       run: python -m pytest --cov=src/pipeoptz
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        cache: 'pip'
+    - name: Install documentation dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install .[docs]
+    - name: Build documentation
+      run: mkdocs build --strict
