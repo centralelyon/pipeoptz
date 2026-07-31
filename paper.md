@@ -10,7 +10,7 @@ authors:
     equal-contrib: false
     affiliation: "1, 2" 
   - name: Théo Jaunet
-    orcid: 0000-0003-3081-5123 # TODO: Add your ORCID here
+    orcid: 0000-0003-3081-5123
     equal-contrib: false
     affiliation: "1, 2" 
   - name: Romain Vuillemot
@@ -18,12 +18,12 @@ authors:
     equal-contrib: false
     affiliation: "1, 2" 
 affiliations:
- - name: Ecole Centrale de Lyon, France
+ - name: Centrale Lyon, France
    index: 1
    ror: 05s6rge65
  - name: LIRIS CNRS UMR 5205, France
    index: 2
-date: 18 November 2025
+date: 31 July 2026
 bibliography: paper.bib
 ---
 
@@ -41,16 +41,15 @@ Existing tools for pipeline management often fall into two categories: heavy-wei
 
 # State of the field
 
-PipeOptz sits at the intersection of workflow orchestration, pipeline representation, and hyperparameter/black-box optimization. Workflow orchestrators such as Apache Airflow [@airflow] and Prefect [@prefect] provide rich operational features (scheduling, monitoring, retries, deployments) and are well-suited for production batch workflows, but they are not designed as lightweight research libraries that expose the pipeline graph as a first-class object for iterative experimentation and optimization inside another tool. On the other end of the spectrum, hyperparameter optimization (HPO) frameworks and Bayesian optimization toolkits typically assume a user-written objective function and leave the internal structure of the computational pipeline implicit in the user’s code, which limits explicit control-flow nodes, graph-level visualization, and step-wise traceability.
+Scientific workflow systems span a broad design space, making comparison and evaluation challenging. To distinguish them, [@singh2019evaluating; @ferreiradasilva2017characterization] suggest the following dimensions: execution environment (in-process, cluster, grid, or cloud), workflow representation, data movement, fault tolerance, provenance, scalability, and usability. We delimit PipeOptz using five requirements: (i) arbitrary Python callables execute in the user's process; (ii) dependencies form an inspectable DAG; (iii) conditionals and iterative sub-pipelines are explicit, with caller-supplied bounds for `while` loops when termination is not otherwise guaranteed; (iv) heterogeneous node parameters can be searched against an application-specific black-box loss; and (v) the graph, intermediate outputs, and timings remain accessible during interactive experimentation. PipeOptz is not intended to provide distributed resource scheduling, durable execution, data staging, or multi-user workflow operations.
 
-PipeOptz was created to support the needs of Descript, where we required (i) an expressive, multi-step pipeline with explicit control-flow (loops and conditionals), (ii) heterogeneous tunable parameters optimized against an application-specific loss function, and (iii) built-in graph visualization and execution traceability for rapid research iteration. In principle, part of this functionality could be implemented by extending an existing optimization toolkit with a custom loss, but the core requirement here is the combination of "pipeline-as-a-graph" modeling, control-flow nodes, and a clean separation between execution and optimization. Because these constraints cut across the fundamental abstractions of existing orchestration/HPO tools, we implemented a dedicated library designed as a reusable backend component for research workflows rather than an operational orchestrator.
+Pegasus combined with HTCondor is an important point of comparison. Pegasus maps abstract scientific DAGs to executable workflows and supplies data management, provenance, recovery, and execution across heterogeneous distributed resources [@deelman2015pegasus]; HTCondor offers high-throughput scheduling and resource management [@thain2005condor]. This combination can express the dependency orchestration performed by PipeOptz and supports substantially larger and more reliable deployments. That capability carries the concepts and operational configuration required for distributed execution. PipeOptz trades those facilities for an embeddable Python object that can be created, run, inspected, and repeatedly optimized inside a script or notebook. It should not be used where Pegasus/HTCondor's scheduling, recovery, provenance, or scale are required.
 
-To clarify our position with respect to closely related optimization libraries, Bayesian optimization frameworks such as BayesO [@Kim2023_BayesO] and pyGPGO [@Jimenez2017_pyGPGO] focus primarily on sample-efficient search strategies for expensive black-box objectives. In these systems the pipeline is usually encoded inside a single objective function, so the optimizer does not directly represent intermediate steps or control flow. PipeOptz keeps the optimization goal identical (minimize a user-defined loss), but makes the evaluation procedure explicit: the workflow is represented as a graph of nodes with dependencies and control-flow constructs, enabling node-level traceability and visualization while still treating the overall pipeline outcome as the quantity to optimize.
+Other scientific systems make different trade-offs. FireWorks is Python-based and supports dynamic workflows, persistent provenance, failure recovery, and high-throughput execution backed by a database [@jain2015fireworks]. Dask is Python-native and represents computations as task graphs executed by local or distributed schedulers [@rocklin2015dask], making it the closer choice when parallel collections or scalable task scheduling are primary. dispel4py expresses data-intensive Python workflows and maps them onto multiple parallel enactment platforms [@krause2015dispel4py]. In contrast, PipeOptz currently executes locally and synchronously: its distinguishing concern is not scheduler performance or streaming throughput, but the combination of explicit control-flow sub-pipelines with an optimization layer that repeatedly evaluates the whole graph while searching its parameters.
 
-AutoML frameworks such as NiaAML [@Pecnik2021_NiaAML] also address "pipeline + optimization", but they target the automated composition and tuning of machine-learning pipelines within a predefined space of ML components and objectives. PipeOptz is intentionally not ML-specific: it targets research workflows where the pipeline steps are arbitrary Python functions and the loss can encode domain-specific criteria (e.g., balancing geometric accuracy and the number of extracted targets), making it suitable as a backend for alternative approaches beyond conventional ML pipelines.
+The optimization comparison further narrows the focus of PipeOptz. Bayesian optimization frameworks such as BayesO [@Kim2023_BayesO] and pyGPGO [@Jimenez2017_pyGPGO] efficiently search expensive black-box objectives, but the evaluation pipeline normally remains implicit inside the objective function. AutoML frameworks such as NiaAML [@Pecnik2021_NiaAML] compose and tune machine-learning components from a predefined domain. PipeOptz instead exposes arbitrary intermediate Python steps and is not ML-specific. Conversely, PipeOptz's included search algorithms are baseline implementations rather than a replacement for specialized optimization packages. Algebraic tools such as Linopy [@Hofmann2023_Linopy] are preferable when the problem can be stated as a linear or mixed-integer model instead of evaluated by executing a workflow.
 
-Finally, some optimization problems are best addressed by algebraic modeling and solver-based approaches. Linopy [@Hofmann2023_Linopy], for example, provides a modeling layer for linear and mixed-integer optimization with labeled n-dimensional variables and solver backends. PipeOptz is complementary: it targets workflows whose objective is evaluated by executing an end-to-end pipeline and cannot be naturally expressed as a linear/mixed-integer model.
-
+These distinctions define the intended niche: PipeOptz is a small orchestration and optimization layer for local research code where inspectability and low integration cost matter more than parallel speed, durable state, or operational automation. Airflow [@airflow] and Prefect [@prefect] remain more appropriate for scheduled production workflows, just as Pegasus/HTCondor, FireWorks, Dask, and dispel4py are more appropriate for their respective distributed and data-intensive settings.
 
 
 # Software Design
@@ -76,6 +75,8 @@ Finally, some optimization problems are best addressed by algebraic modeling and
     - Particle Swarm Optimization (PSO) [@kennedy1995pso]
     - Genetic Algorithm (GA) [@holland1975adaptation].
 
+-   **`Callback`**: Optimization runs can be monitored through lifecycle callbacks, following the hook-based pattern familiar from TensorFlow/Keras training workflows [@tensorflow2015-whitepaper]. This allows users to report progress, collect experiment logs, checkpoint intermediate states, or diagnose failed optimization runs without changing the optimizer implementation.
+
 The library also provides features for:
 -   **Visualization**: Pipelines can be visualized as graphs using the `to_dot` and `to_image` methods, which generate Graphviz dot files and PNG images [@gansner2000graphviz].
 -   **Serialization**: Pipelines can be saved to and loaded from JSON files using the `to_json` and `from_json` methods, enabling reuse and sharing beyond a single Python script (the `.dot` export is used for visualization and does not capture full pipeline semantics).
@@ -83,7 +84,7 @@ The library also provides features for:
 
 # Research Impact Statement
 
-PipeOptz is currently used as a workflow-level optimization backend in ongoing applied research prototypes where the target objective is not a standard machine-learning training loss, but an application-specific loss computed by executing a multi-step processing workflow. In these settings, practitioners need to iterate quickly over non-linear pipelines (including branching and loops) and tune heterogeneous parameters while keeping the workflow explicit, inspectable, and reproducible.
+PipeOptz is currently used as a workflow-level optimization backend in ongoing applied research prototypes where the target objective is not a standard machine-learning training loss, but an application-specific loss computed by executing a multi-step processing workflow. A concrete current use is with `centralelyon/ntt`, a Python library for image and video processing that uses PipeOptz to build complex processing pipelines [@ntt]. In these settings, practitioners need to iterate quickly over non-linear pipelines (including branching and loops) and tune heterogeneous parameters while keeping the workflow explicit, inspectable, and reproducible.
 
 As this work is ongoing, we focus on credible near-term significance and reusability signals. PipeOptz is distributed as a Python package via PyPI, released under an OSI-approved license, and includes continuous integration, automated tests, and structured documentation with runnable examples. The repository provides executable examples demonstrating core capabilities (including control-flow pipelines and end-to-end optimization), and the runtime interface exposes node-level outputs and execution timing to support debugging and profiling of research workflows. These materials make PipeOptz reusable by other researchers who need to define, visualize, and optimize DAG-based pipelines in a lightweight, Pythonic way, especially in image-processing and related scientific workflows.
 

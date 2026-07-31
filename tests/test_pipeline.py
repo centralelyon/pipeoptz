@@ -1,11 +1,12 @@
-import pytest
 import json
-
-import sys
 import os
+import sys
+
+import pytest
+
 sys.path.append(os.path.abspath("../src/"))
+from pipeoptz.node import Node, NodeFor, NodeIf, NodeWhile
 from pipeoptz.pipeline import Pipeline, _product
-from pipeoptz.node import Node, NodeIf, NodeFor, NodeWhile
 
 
 @pytest.fixture
@@ -146,6 +147,15 @@ class TestPipelineStructure:
         assert "add1" in p.nodes
         assert p.nodes["add1"] == node
         assert p.node_dependencies["add1"] == {'a': 'run_params:x'}
+
+    def test_add_node_accepts_node_id_alias(self, add_func):
+        """
+        Tests adding a node built with the public id alias.
+        """
+        p = Pipeline(name="test")
+        p.add_node(Node(id="A", func=add_func, fixed_params={"a": 5, "b": 3}))
+
+        assert p.run()[1]["A"] == 8
 
     def test_add_duplicate_node_id_raises_error(self, add_func):
         """

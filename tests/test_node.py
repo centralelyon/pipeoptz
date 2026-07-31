@@ -1,11 +1,12 @@
-import pytest
-import numpy as np
+import os
+import sys
 from unittest.mock import Mock
 
-import sys
-import os
+import numpy as np
+import pytest
+
 sys.path.append(os.path.abspath("../src/"))
-from pipeoptz.node import Node, NodeIf, NodeFor, NodeWhile
+from pipeoptz.node import Node, NodeFor, NodeIf, NodeWhile
 from pipeoptz.pipeline import Pipeline
 
 
@@ -65,6 +66,14 @@ class TestNode:
         assert node.fixed_params == {'a': 1}
         assert node.output is None
         assert node.input_hash_last_exec is None
+
+    def test_node_initialization_accepts_id_alias(self, simple_add_func):
+        """
+        Tests that Node accepts id as a public alias for node_id.
+        """
+        node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
+        assert node.id == "add_node"
+        assert node.execute(inputs={'b': 2}) == 3
 
     def test_get_id(self, simple_add_func):
         """

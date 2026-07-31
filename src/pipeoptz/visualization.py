@@ -1,11 +1,12 @@
 """Visualization module for Pipeline graphs using DOT/Graphviz."""
 from __future__ import annotations
-import os
-import subprocess
-import re
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from .node import Node, NodeIf, NodeFor, NodeWhile
+import os
+import re
+import subprocess
+from typing import TYPE_CHECKING, Any
+
+from .node import Node, NodeFor, NodeIf, NodeWhile
 
 if TYPE_CHECKING:
     from .pipeline import Pipeline
@@ -17,7 +18,7 @@ class Visualizer:
         """Initialize the Visualizer with a pipeline."""
         self.pipeline = pipeline
 
-    def to_dot(self, filepath: Optional[str] = None,
+    def to_dot(self, filepath: str | None = None,
                add_optz: bool = False, show_function: bool = True, _prefix: str = "") -> str:
         """
         Generates a DOT language representation of the pipeline graph.
@@ -34,7 +35,7 @@ class Visualizer:
         def escape_id(nid: str) -> str:
             return f"{_prefix}{nid}"
 
-        dot_lines: List[str] = []
+        dot_lines: list[str] = []
         dot_lines.append("digraph Pipeline {" if _prefix == "" else "subgraph Pipeline {")
         dot_lines.append('  rankdir=TB;')  # vertical layout
         dot_lines.append('  node [fontsize=12 fontname="Helvetica"];')
@@ -191,7 +192,7 @@ class Visualizer:
         return f"{func_module}.{func_name}"
 
     @classmethod
-    def _add_mermaid_node(cls, state: Dict[str, Any], node_id: str,
+    def _add_mermaid_node(cls, state: dict[str, Any], node_id: str,
                           label: str, shape: str = "box") -> None:
         """Adds a Mermaid node definition once."""
         if node_id in state["defined_nodes"]:
@@ -206,8 +207,8 @@ class Visualizer:
         state["defined_nodes"].add(node_id)
 
     @staticmethod
-    def _add_mermaid_edge(state: Dict[str, Any], source: str,
-                          target: str, label: Optional[str] = None) -> None:
+    def _add_mermaid_edge(state: dict[str, Any], source: str,
+                          target: str, label: str | None = None) -> None:
         """Adds a Mermaid edge definition once."""
         edge = f"{source}|{label}|{target}" if label is not None else f"{source}|{target}"
         if edge in state["defined_edges"]:
@@ -218,9 +219,9 @@ class Visualizer:
             state["lines"].append(f'    {source} -->|{label}| {target}')
         state["defined_edges"].add(edge)
 
-    def to_mermaid(self, filepath: Optional[str] = None,
+    def to_mermaid(self, filepath: str | None = None,
                    add_optz: bool = False, show_function: bool = True,
-                   _prefix: str = "", _state: Optional[Dict[str, Any]] = None) -> str:
+                   _prefix: str = "", _state: dict[str, Any] | None = None) -> str:
         """
         Generates a Mermaid flowchart representation of the pipeline graph.
 
@@ -366,22 +367,28 @@ class Visualizer:
     def to_image(self, filepath: str, dpi: int = 160,
                  add_optz: bool = False, show_function: bool = True) -> None:
         """Generates a PNG image of the pipeline graph using Graphviz."""
-        delete = False
-        if filepath is None or not os.path.exists(filepath):
-            self.to_dot(os.path.splitext(filepath)[0] + ".dot",
-                        add_optz=add_optz, show_function=show_function)
-            delete = True
-        try:
-            res = subprocess.run(
-                ["dot", "-Tpng", f"-Gdpi={int(dpi)}", "-o", filepath,
-                 os.path.splitext(filepath)[0] + ".dot"],
-                check=True,
-            )
+        dot_filepath = os.path.splitext(filepath)[0] + ".dot"
+        delete_dot = not os.path.exists(dot_filepath)
+        self.to_dot(dot_filepath, add_optz=add_optz, show_function=show_function)
 
-        except Exception as e:
-            raise RuntimeError("Error during PNG generation.\n"+
-                               "Do you have graphviz installed?") from e
-        if res.returncode != 0:
-            print("Error during PNG generation")
-        if delete:
-            os.remove(os.path.splitext(filepath)[0] + ".dot")
+        try:
+            subprocess.run(
+                ["dot", "-Tpng", f"-Gdpi={int(dpi)}", "-o", filepath,
+                 dot_filepath],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError as e:
+            raise RuntimeError(
+                "Error during PNG generation: the Graphviz 'dot' executable "
+                "was not found. Install Graphviz and ensure 'dot' is on PATH."
+            ) from e
+        except subprocess.CalledProcessError as e:
+            details = (e.stderr or e.stdout or str(e)).strip()
+            raise RuntimeError(
+                f"Error during PNG generation. Graphviz reported:\n{details}"
+            ) from e
+
+        if delete_dot:
+            os.remove(dot_filepath)

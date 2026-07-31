@@ -25,26 +25,43 @@ The package is provided with a `LICENSE` file which contains the license terms.
 
 ## Installation
 
-### Installation from PyPi
-The easiest way to install PipeOptz is through pip. Open your terminal and run the follwing command:
+### Installation from PyPI
+
+The easiest way to install PipeOptz is with `pip`:
 
 ```bash
 pip install --upgrade --user pipeoptz
 ```
 
 ### Installation from source
+
 If you're reading this `README` from a source distribution, you can install PipeOptz after downloading it with:
 
 ```bash
 pip install --upgrade --user .
 ```
 
-You can also install the latest development version directly from Github:
+You can also install the latest development version directly from GitHub:
+
 ```bash
 pip install --upgrade --user https://github.com/centralelyon/pipeoptz/archive/main.zip
 ```
 
-For local development install PipeOptz in editable mode:
+For local development, install PipeOptz in editable mode with its development dependencies:
+
+```bash
+pip install --editable ".[dev]"
+```
+
+### Checking the installed version
+
+The installed PipeOptz version is available as `pipeoptz.__version__`:
+
+```python
+import pipeoptz
+
+print(pipeoptz.__version__)
+```
 
 ## Quick Start
 
@@ -65,13 +82,13 @@ pipeline = Pipeline(name="arithmetic_pipeline")
 
 # 3. Create nodes and add them to the pipeline with dependencies
 # Node A: 5 + 3 = 8
-pipeline.add_node(Node(id="A", func=add, fixed_params={"x": 5, "y": 3}))
+pipeline.add_node(Node(node_id="A", func=add, fixed_params={"x": 5, "y": 3}))
 
 # Node B: Takes the output of A as input -> 8 * 10 = 80
-pipeline.add_node(Node(id="B", func=multiply, fixed_params={"b": 10}), predecessors={"a": "A"})
+pipeline.add_node(Node(node_id="B", func=multiply, fixed_params={"b": 10}), predecessors={"a": "A"})
 
 # Node C: Takes the output of B as input -> 80 + 1 = 81
-pipeline.add_node(Node(id="C", func=add, fixed_params={"y": 1}), predecessors={"x": "B"})
+pipeline.add_node(Node(node_id="C", func=add, fixed_params={"y": 1}), predecessors={"x": "B"})
 
 
 # 4. Run the pipeline
@@ -83,8 +100,8 @@ print(f"Result of final node 'C': {history[last_node]}")
 print(f"History of all node outputs: {history}")
 
 # 5. Visualize the pipeline
-# This creates a .dot file and a .png image of the graph
-pipeline.to_dot("basic.dot", generate_png=True)
+# This creates a Graphviz .dot file without requiring Graphviz to be installed
+pipeline.to_dot("basic.dot")
 ```
 
 This script will output:
@@ -95,7 +112,7 @@ Result of final node 'C': 81
 History of all node outputs: {'A': 8, 'B': 80, 'C': 81}
 ```
 
-And it will generate an image (`basic.png`) of your pipeline's structure, taken from the `basic.ipynb` example:
+A rendered version of the pipeline from `basic.ipynb` is shown below:
 
 <div align="center">
   <img src="https://github.com/centralelyon/pipeoptz/blob/main/examples/basic/basic.png?raw=true" alt="Simple Pipeline Graph" width="120"/>
@@ -113,13 +130,54 @@ To do this, you would:
 
 For a complete, runnable optimization example, please see the Jupyter Notebook at: **`examples/advanced/simple.ipynb`**.
 
+### Monitoring optimization with callbacks
+
+Subclass `Callback` to observe an optimization run. Callbacks receive the optimizer
+through `self.optimizer` and lifecycle data through the `logs` dictionary.
+
+```python
+from pipeoptz import Callback
+
+
+class ProgressCallback(Callback):
+    def on_optimization_begin(self, logs=None):
+        print(f"Starting {logs['method']}")
+
+    def on_iteration_end(self, iteration, logs=None):
+        print(f"Iteration {iteration + 1}: loss={logs['best_loss']:.4f}")
+
+    def on_optimization_end(self, logs=None):
+        print(f"Optimization {logs['status']}")
+
+
+best_params, loss_log = optimizer.optimize(
+    X,
+    y,
+    method="GA",
+    generations=50,
+    callbacks=[ProgressCallback()],
+)
+```
+
+Available hooks are `on_optimization_begin`, `on_optimization_end`,
+`on_iteration_begin`, `on_iteration_end`, `on_evaluation_begin`, and
+`on_evaluation_end`. Iteration and evaluation indexes are zero-based.
+
 ## Examples
+
 Several example pipelines are provided in the `examples/` directory. These include:
 -   `basic/`: A simple pipeline with arithmetic operations.
+-   `callback/`: Standalone completion and step-by-step optimization callbacks.
 -   `cond/`: A pipeline demonstrating conditional branching.
 -   `for/`: A pipeline demonstrating for loops.
 -   `while/`: A pipeline demonstrating while loops.
--   `opti/`: A pipeline demonstrating optimization pipeline with tunable parameters.ù
+-   `opti/`: A pipeline demonstrating optimization with tunable parameters.
+
+### Setup for examples
+
+You may install additionnal dependencies included in `requirements-examples.txt` You may also install the system-level Graphviz package:
+
+> sudo apt-get update && sudo apt-get install -y graphviz
 
 ## Docker
 
@@ -152,7 +210,13 @@ This will mount your current directory to `/workspace` inside the container.
 
 ## Building Docs
 
-This project uses [MkDocs](https://www.mkdocs.org/) to generate documentation.
+This project uses [MkDocs Material](https://squidfunk.github.io/mkdocs-material/)
+and `mkdocstrings` to generate documentation. Install the documentation
+dependencies with:
+
+```bash
+pip install --editable ".[docs]"
+```
 
 To serve the documentation locally, run the following command from the root of the project:
 
@@ -162,11 +226,20 @@ mkdocs serve
 
 This will start a local server, and you can view the documentation by opening your browser to `http://127.0.0.1:8000`.
 
-## Testing
-PipeOptz makes use of pytest for its test suite.
+To verify the documentation without starting a server:
+
+```bash
+mkdocs build --strict
 ```
-pip install pytest
-pytest
+
+## Testing
+
+PipeOptz uses pytest. From the project root, install the development dependencies
+and run the `tests/` directory explicitly:
+
+```bash
+pip install --editable ".[dev]"
+python -m pytest tests
 ```
 
 ## Contributing
