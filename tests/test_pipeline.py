@@ -148,6 +148,15 @@ class TestPipelineStructure:
         assert p.nodes["add1"] == node
         assert p.node_dependencies["add1"] == {'a': 'run_params:x'}
 
+    def test_add_node_accepts_node_id_alias(self, add_func):
+        """
+        Tests adding a node built with the public id alias.
+        """
+        p = Pipeline(name="test")
+        p.add_node(Node(id="A", func=add_func, fixed_params={"a": 5, "b": 3}))
+
+        assert p.run()[1]["A"] == 8
+
     def test_add_duplicate_node_id_raises_error(self, add_func):
         """
         Tests that adding a node with a duplicate id raises an error.

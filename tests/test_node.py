@@ -67,6 +67,14 @@ class TestNode:
         assert node.output is None
         assert node.input_hash_last_exec is None
 
+    def test_node_initialization_accepts_id_alias(self, simple_add_func):
+        """
+        Tests that Node accepts id as a public alias for node_id.
+        """
+        node = Node(id="add_node", func=simple_add_func, fixed_params={'a': 1})
+        assert node.id == "add_node"
+        assert node.execute(inputs={'b': 2}) == 3
+
     def test_get_id(self, simple_add_func):
         """
         Tests the get_id method.

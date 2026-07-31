@@ -24,9 +24,25 @@ class Node:
         input_hash_last_exec: Caches the hash of the inputs from the last execution,
             used for memory optimization.
     """
-    def __init__(self, node_id: str, func: Callable[..., Any], \
-                 fixed_params: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        node_id: str | None = None,
+        func: Callable[..., Any] | None = None,
+        fixed_params: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Initializes a Node."""
+        if "id" in kwargs:
+            if node_id is not None:
+                raise TypeError("Node received both 'node_id' and 'id'.")
+            node_id = kwargs.pop("id")
+        if kwargs:
+            unexpected = next(iter(kwargs))
+            raise TypeError(f"Node got an unexpected keyword argument '{unexpected}'.")
+        if node_id is None:
+            raise TypeError("Node missing required argument: 'node_id'.")
+        if func is None:
+            raise TypeError("Node missing required argument: 'func'.")
         self.id: str = node_id
         self.func: Callable[..., Any] = func
         self.fixed_params: dict[str, Any] = fixed_params if fixed_params is not None else {}
