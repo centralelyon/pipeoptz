@@ -1,9 +1,12 @@
 """Defines the different types of parameters that can be used in a pipeline."""
+from __future__ import annotations
 
 import random as rd
 from math import comb
-from typing import Any, Union, List, Dict
+from typing import Any
+
 import numpy as np
+
 
 class Parameter:
     """
@@ -46,7 +49,7 @@ class Parameter:
         """
         raise NotImplementedError("This method must be implemented in subclasses.")
 
-    def get_description(self) -> Dict[str, Any]:
+    def get_description(self) -> dict[str, Any]:
         """
         Returns a description of the parameter's parametric space.
         This should be overridden in subclasses.
@@ -136,7 +139,7 @@ class IntParameter(Parameter):
             self.set_value(r)
         return r
 
-    def get_description(self) -> Dict[str, Any]:
+    def get_description(self) -> dict[str, Any]:
         return {"type": "int",
                 "value": self.value,
                     "min": self.min_value,
@@ -234,7 +237,7 @@ class FloatParameter(Parameter):
             self.set_value(r)
         return r
 
-    def get_description(self) -> Dict[str, Any]:
+    def get_description(self) -> dict[str, Any]:
         return {"type": "float",
                 "value": self.value,
                 "min": self.min_value,
@@ -254,7 +257,7 @@ class ChoiceParameter(Parameter):
         choices (list): The list of valid options for this parameter.
         value: The currently selected choice.
     """
-    def __init__(self, node_id: str, param_name: str, choices: List[Any]) -> None:
+    def __init__(self, node_id: str, param_name: str, choices: list[Any]) -> None:
         """
         Initializes a ChoiceParameter.
 
@@ -266,7 +269,7 @@ class ChoiceParameter(Parameter):
         if not choices:
             raise ValueError("choices must be a non-empty list.")
         super().__init__(node_id, param_name)
-        self.choices: List[Any] = list(choices)
+        self.choices: list[Any] = list(choices)
         self.get_random_value(True)
 
     def set_value(self, value: Any) -> None:
@@ -303,7 +306,7 @@ class ChoiceParameter(Parameter):
             self.set_value(r)
         return r
 
-    def get_description(self) -> Dict[str, Any]:
+    def get_description(self) -> dict[str, Any]:
         return {"type": "choice",
                 "value": self.value,
                 "choices": self.choices}
@@ -323,8 +326,8 @@ class MultiChoiceParameter(Parameter):
         max_choices (int): The maximum number of items to select.
         value (list): The currently selected list of choices.
     """
-    def __init__(self, node_id: str, param_name: str, choices: List[Any], \
-                 min_choices: int = 1, max_choices: Union[int, None] = None) -> None:
+    def __init__(self, node_id: str, param_name: str, choices: list[Any], \
+                 min_choices: int = 1, max_choices: int | None = None) -> None:
         """
         Initializes a MultiChoiceParameter.
 
@@ -348,7 +351,7 @@ class MultiChoiceParameter(Parameter):
         if min_choices < 1:
             raise ValueError("min_choices must be at least 1.")
         super().__init__(node_id, param_name)
-        self.choices: List[Any] = choices
+        self.choices: list[Any] = choices
         self.min_choices: int = min_choices
         if max_choices is None:
             self.max_choices: int = self.min_choices
@@ -358,10 +361,10 @@ class MultiChoiceParameter(Parameter):
             self.max_choices: int = max_choices
 
         n: int = len(self.choices)
-        self._c: List[int] =  [comb(n, k) for k in range(self.min_choices, self.max_choices + 1)]
+        self._c: list[int] =  [comb(n, k) for k in range(self.min_choices, self.max_choices + 1)]
         self.get_random_value(True)
 
-    def set_value(self, value: List[Any]) -> None:
+    def set_value(self, value: list[Any]) -> None:
         """
         Sets the value of the parameter, ensuring it is a valid sub-list of choices.
 
@@ -382,11 +385,11 @@ class MultiChoiceParameter(Parameter):
                 raise ValueError(f"The value '{v}' is not in the allowed choices: {self.choices}.")
         self.value = value
 
-    def get_value(self) -> List[Any]:
+    def get_value(self) -> list[Any]:
         """Returns the current list of selected values."""
         return self.value
 
-    def get_random_value(self, set_value: bool = False) -> List[Any]:
+    def get_random_value(self, set_value: bool = False) -> list[Any]:
         """
         Generates a random sub-list of choices that respects the size constraints.
 
@@ -398,12 +401,12 @@ class MultiChoiceParameter(Parameter):
             list: A random list of choices.
         """
         k: int = rd.choices(range(self.min_choices, self.max_choices + 1), weights=self._c, k=1)[0]
-        r: List[Any] = rd.sample(self.choices, k=k)
+        r: list[Any] = rd.sample(self.choices, k=k)
         if set_value:
             self.set_value(r)
         return r
 
-    def get_description(self) -> Dict[str, Any]:
+    def get_description(self) -> dict[str, Any]:
         return {"type": "multichoice",
                 "value": self.value,
                 "choices": self.choices,
@@ -464,6 +467,6 @@ class BoolParameter(Parameter):
             self.set_value(r)
         return r
 
-    def get_description(self) -> Dict[str, Any]:
+    def get_description(self) -> dict[str, Any]:
         return {"type": "bool",
                 "value": self.value}

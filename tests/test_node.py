@@ -1,11 +1,12 @@
-import pytest
-import numpy as np
+import os
+import sys
 from unittest.mock import Mock
 
-import sys
-import os
+import numpy as np
+import pytest
+
 sys.path.append(os.path.abspath("../src/"))
-from pipeoptz.node import Node, NodeIf, NodeFor, NodeWhile
+from pipeoptz.node import Node, NodeFor, NodeIf, NodeWhile
 from pipeoptz.pipeline import Pipeline
 
 

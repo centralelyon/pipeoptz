@@ -1,12 +1,14 @@
 """Tests for the Visualizer class."""
-import pytest
-import sys
 import os
 import subprocess
+import sys
 from unittest.mock import patch
+
+import pytest
+
 sys.path.append(os.path.abspath("../src/"))
+from pipeoptz.node import Node, NodeFor, NodeIf, NodeWhile
 from pipeoptz.pipeline import Pipeline
-from pipeoptz.node import Node, NodeIf, NodeFor, NodeWhile
 from pipeoptz.visualization import Visualizer
 
 
@@ -158,9 +160,11 @@ class TestVisualizer:
             stderr="Error: dot: can't open graph.dot",
         )
 
-        with patch("pipeoptz.visualization.subprocess.run", side_effect=error):
-            with pytest.raises(RuntimeError, match="can't open graph.dot"):
-                basic_pipeline.to_image(str(image_path))
+        with (
+            patch("pipeoptz.visualization.subprocess.run", side_effect=error),
+            pytest.raises(RuntimeError, match="can't open graph.dot"),
+        ):
+            basic_pipeline.to_image(str(image_path))
 
     def test_visualizer_to_mermaid_generates_string(self, basic_pipeline):
         """

@@ -1,11 +1,12 @@
-import pytest
 import json
-
-import sys
 import os
+import sys
+
+import pytest
+
 sys.path.append(os.path.abspath("../src/"))
+from pipeoptz.node import Node, NodeFor, NodeIf, NodeWhile
 from pipeoptz.pipeline import Pipeline, _product
-from pipeoptz.node import Node, NodeIf, NodeFor, NodeWhile
 
 
 @pytest.fixture

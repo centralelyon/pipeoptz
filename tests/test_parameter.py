@@ -1,17 +1,17 @@
+import os
+import sys
+
 import pytest
 
-import sys
-import os
 sys.path.append(os.path.abspath("../src/"))
 from pipeoptz.parameter import (
-    Parameter,
-    IntParameter,
-    FloatParameter,
+    BoolParameter,
     ChoiceParameter,
+    FloatParameter,
+    IntParameter,
     MultiChoiceParameter,
-    BoolParameter
+    Parameter,
 )
-
 
 # --- Parameter class tests ---
 

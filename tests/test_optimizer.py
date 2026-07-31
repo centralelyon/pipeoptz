@@ -1,24 +1,25 @@
 # tests/test_optimizer.py
 
-import pytest
-import numpy as np
-from unittest.mock import patch
-import warnings
-
-import sys
 import os
+import sys
+import warnings
+from unittest.mock import patch
+
+import numpy as np
+import pytest
+
 sys.path.append(os.path.abspath("../src/"))
-from pipeoptz.optimizer import PipelineOptimizer
 from pipeoptz.callback import Callback
-from pipeoptz.pipeline import Pipeline
 from pipeoptz.node import Node
+from pipeoptz.optimizer import PipelineOptimizer
 from pipeoptz.parameter import (
-    IntParameter,
-    FloatParameter,
-    ChoiceParameter,
     BoolParameter,
-    MultiChoiceParameter
+    ChoiceParameter,
+    FloatParameter,
+    IntParameter,
+    MultiChoiceParameter,
 )
+from pipeoptz.pipeline import Pipeline
 
 
 class RecordingCallback(Callback):
@@ -170,7 +171,7 @@ class TestOptimizerEvaluate:
         """
         Tests that the evaluate method runs the pipeline with the current parameters and computes the loss correctly.
         """
-        X, y, _ = sample_data
+        _X, _y, _ = sample_data
         
         optimizer_instance.set_params({"node1.a": 5, "node2.b": 5.0, "node1.c": "x", "node2.d": True})
         
@@ -190,7 +191,7 @@ class TestOptimizerEvaluate:
         
         optimizer.add_param(IntParameter("node1", "a", 0, 10))
         optimizer.set_params({"node1.a": 1})
-        X, y, y_neg = sample_data
+        _X, _y, _y_neg = sample_data
 
         # anchor=3, positive=3, negative=3
         # loss = mean(max(0, 1 + 0 - 0)) = 1
@@ -337,11 +338,13 @@ class TestOptimizerCallbacks:
         X, y, _ = sample_data
         callback = RecordingCallback()
 
-        with patch.object(
-            optimizer_instance, "optimize_GS", side_effect=RuntimeError("strategy failed")
+        with (
+            patch.object(
+                optimizer_instance, "optimize_GS", side_effect=RuntimeError("strategy failed")
+            ),
+            pytest.raises(RuntimeError, match="strategy failed"),
         ):
-            with pytest.raises(RuntimeError, match="strategy failed"):
-                optimizer_instance.optimize(X, y, method="GS", callbacks=[callback])
+            optimizer_instance.optimize(X, y, method="GS", callbacks=[callback])
 
         assert callback.events[0][0] == "optimization_begin"
         assert callback.events[-1][0] == "optimization_end"

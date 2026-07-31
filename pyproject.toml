@@ -50,3 +50,6 @@ exclude = ["tests*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "pipeoptz.__version__"}
+
+[tool.ruff.lint]
+ignore = ["TRY004"]

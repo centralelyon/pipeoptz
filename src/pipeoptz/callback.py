@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .optimizer import PipelineOptimizer
@@ -17,40 +18,40 @@ class Callback:
     """
 
     def __init__(self) -> None:
-        self.optimizer: Optional[PipelineOptimizer] = None
-        self.params: Dict[str, Any] = {}
+        self.optimizer: PipelineOptimizer | None = None
+        self.params: dict[str, Any] = {}
 
     def set_optimizer(self, optimizer: PipelineOptimizer) -> None:
         """Set the optimizer associated with this callback."""
         self.optimizer = optimizer
 
-    def set_params(self, params: Dict[str, Any]) -> None:
+    def set_params(self, params: dict[str, Any]) -> None:
         """Set the configuration of the current optimization run."""
         self.params = params
 
-    def on_optimization_begin(self, logs: Optional[Dict[str, Any]] = None) -> None:
+    def on_optimization_begin(self, logs: dict[str, Any] | None = None) -> None:
         """Run before the optimization strategy starts."""
 
-    def on_optimization_end(self, logs: Optional[Dict[str, Any]] = None) -> None:
+    def on_optimization_end(self, logs: dict[str, Any] | None = None) -> None:
         """Run after optimization finishes or fails."""
 
     def on_iteration_begin(
-        self, iteration: int, logs: Optional[Dict[str, Any]] = None
+        self, iteration: int, logs: dict[str, Any] | None = None
     ) -> None:
         """Run before an optimization iteration starts."""
 
     def on_iteration_end(
-        self, iteration: int, logs: Optional[Dict[str, Any]] = None
+        self, iteration: int, logs: dict[str, Any] | None = None
     ) -> None:
         """Run after an optimization iteration finishes."""
 
     def on_evaluation_begin(
-        self, evaluation: int, logs: Optional[Dict[str, Any]] = None
+        self, evaluation: int, logs: dict[str, Any] | None = None
     ) -> None:
         """Run before a candidate parameter configuration is evaluated."""
 
     def on_evaluation_end(
-        self, evaluation: int, logs: Optional[Dict[str, Any]] = None
+        self, evaluation: int, logs: dict[str, Any] | None = None
     ) -> None:
         """Run after a candidate parameter configuration is evaluated."""
 
@@ -60,12 +61,12 @@ class _CallbackList:
 
     def __init__(
         self,
-        callbacks: Optional[Union[Callback, Iterable[Callback]]] = None,
-        optimizer: Optional[PipelineOptimizer] = None,
-        params: Optional[Dict[str, Any]] = None,
+        callbacks: Callback | Iterable[Callback] | None = None,
+        optimizer: PipelineOptimizer | None = None,
+        params: dict[str, Any] | None = None,
     ) -> None:
         if callbacks is None:
-            self.callbacks: List[Callback] = []
+            self.callbacks: list[Callback] = []
         elif isinstance(callbacks, Callback):
             self.callbacks = [callbacks]
         else:
