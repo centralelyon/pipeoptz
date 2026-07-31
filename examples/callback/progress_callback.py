@@ -1,70 +1,87 @@
-"""Report step-by-step progress while fitting an affine function."""
+import time
+from pipeoptz import Pipeline, Node, PipelineOptimizer, Callback, IntParameter
 
-from pipeoptz import Callback, IntParameter, Node, Pipeline, PipelineOptimizer
+# ---------------------------------------------------------
+# 1. Define the Node Functions (with built-in sleep/wait)
+# ---------------------------------------------------------
+def add(x, y):
+    """Adds two numbers, deliberately slowed down."""
+    time.sleep(0.5)  # 0.5 second wait
+    return x + y
 
+def multiply(a, b):
+    """Multiplies two numbers, deliberately slowed down."""
+    time.sleep(0.5)  # 0.5 second wait
+    return a * b
 
-def affine(value, slope, intercept):
-    """Apply an affine transformation to a value."""
-    return slope * value + intercept
+# ---------------------------------------------------------
+# 2. Build the Pipeline
+# ---------------------------------------------------------
+pipeline = Pipeline(name="slow_optimization_pipeline")
 
+# Node A will add `x` and `y`. We fix `y=3`, but leave `x` to be optimized.
+pipeline.add_node(Node(node_id="A", func=add, fixed_params={"y": 3}))
 
-def absolute_error(actual, expected):
-    """Return the absolute difference between two values."""
-    return abs(actual - expected)
+# Node B takes Node A's output (mapped to `a`) and multiplies it by fixed `b=10`.
+pipeline.add_node(Node(node_id="B", func=multiply, fixed_params={"b": 10}), predecessors={"a": "A"})
 
+# ---------------------------------------------------------
+# 3. Define the Optimization Search Space & Loss Function
+# ---------------------------------------------------------
+# We want the optimizer to test values for `x` in Node A between 1 and 20.
+# (Note: Syntax for mapping parameters to nodes can vary slightly by version; 
+# commonly it uses a dictionary or a specific naming convention like "A__x").
+parameters = {
+    "A__x": IntParameter(lower_bound=1, upper_bound=20)
+}
 
-class StepProgressCallback(Callback):
-    """Print the best loss and parameters after every search step."""
+# We want our pipeline's final output (Node B) to perfectly hit 150.
+# If A__x = 12 -> Node A: (12 + 3) = 15 -> Node B: (15 * 10) = 150.
+def loss_function(history):
+    target_value = 150
+    final_output = history["B"]
+    # The optimizer will try to minimize this return value (0 is a perfect match)
+    return abs(target_value - final_output)
 
+# ---------------------------------------------------------
+# 4. Create a Custom "Slow" Callback for Logging
+# ---------------------------------------------------------
+class SlowProgressCallback(Callback):
     def on_optimization_begin(self, logs=None):
-        print(f"Starting {logs['method']} optimization")
+        print(f"\n🚀 Starting Optimization using {logs.get('method', 'Algorithm')}...")
+        time.sleep(1) # Wait 1 second before spamming the console
 
     def on_iteration_end(self, iteration, logs=None):
-        step = iteration + 1
-        total = logs["total_iterations"]
-        print(
-            f"Step {step:02d}/{total}: "
-            f"best_loss={logs['best_loss']:.2f}, "
-            f"best_params={logs['best_params']}"
-        )
+        print(f"🔄 Iteration {iteration + 1} complete | Best Loss so far: {logs.get('best_loss', 0):.4f}")
+        time.sleep(1) # Wait 1 second so you can actually read the step
 
     def on_optimization_end(self, logs=None):
-        print(f"Optimization {logs['status']}")
-        if logs["status"] == "completed":
-            print(f"Final parameters: {logs['best_params']}")
+        print(f"✅ Optimization {logs.get('status', 'Finished')}!\n")
 
-
-def build_optimizer():
-    """Create an optimizer for the slope and intercept of an affine function."""
-    pipeline = Pipeline("Affine fitting")
-    pipeline.add_node(
-        Node(
-            node_id="Affine",
-            func=affine,
-            fixed_params={"slope": 1, "intercept": 0},
-        ),
-        predecessors={"value": "run_params:value"},
-    )
-
-    optimizer = PipelineOptimizer(pipeline, absolute_error)
-    optimizer.add_param(
-        IntParameter(node_id="Affine", param_name="slope", min_value=0, max_value=4)
-    )
-    optimizer.add_param(
-        IntParameter(
-            node_id="Affine", param_name="intercept", min_value=-1, max_value=3
-        )
-    )
-    return optimizer
-
-
+# ---------------------------------------------------------
+# 5. Run the Optimizer
+# ---------------------------------------------------------
 if __name__ == "__main__":
-    optimizer = build_optimizer()
-    optimizer.optimize(
-        X=[{"value": 0}, {"value": 1}, {"value": 2}, {"value": 3}],
-        y=[1, 3, 5, 7],  # y = 2x + 1
-        method="GS",
-        max_combinations=25,
-        param_sampling=6,
-        callbacks=[StepProgressCallback()],
+    # Initialize the optimizer engine
+    optimizer = PipelineOptimizer(
+        pipeline=pipeline,
+        parameters=parameters,
+        loss_function=loss_function
     )
+    
+    # X and y are typically used for dataset features/targets in ML pipelines.
+    # Since this is a pure math pipeline, we can pass None or dummy data.
+    X, y = None, None 
+    
+    print("Initializing pipeline optimization run...")
+    
+    # Run the Genetic Algorithm for just 5 generations to keep the test short
+    best_params, loss_log = optimizer.optimize(
+        X,
+        y,
+        method="GA",
+        generations=5, 
+        callbacks=[SlowProgressCallback()]
+    )
+    
+    print(f"🏆 Best parameters found: {best_params}")

@@ -46,17 +46,22 @@ Please resolve any reported issues before submitting a pull request.
 
 ### Testing
 
-Tests are written using the [pytest](https://docs.pytest.org/) framework. To run the full test suite, execute the following command from the root of the project:
+Tests are written using the [pytest](https://docs.pytest.org/) framework. Run the
+following command from the project root (the directory containing
+`pyproject.toml`), not from inside `tests/`:
 
 ```bash
-pytest
+python -m pytest tests
 ```
 
 Make sure that all tests pass before submitting your changes. If you are adding a new feature, please include corresponding tests.
 
 ### Documentation
 
-The project documentation is built using [MkDocs](https://www.mkdocs.org/). For instructions on how to build and serve the documentation locally, please refer to the [Documentation section of the README.md](./README.md#documentation).
+The project documentation is built using MkDocs Material. Install it with
+`pip install --editable ".[docs]"`, then run `mkdocs build --strict`. For local
+serving instructions, see the
+[Building Docs section of README.md](./README.md#building-docs).
 
 ## Pull Request Process
 
@@ -65,7 +70,7 @@ The project documentation is built using [MkDocs](https://www.mkdocs.org/). For 
 3.  **Make your code changes.**
 4.  **Ensure your code is well-formatted and tested:**
     - Run `pylint src/pipeoptz` and address any issues.
-    - Run `pytest` to ensure all tests pass.
+    - Run `python -m pytest tests` from the project root to ensure all tests pass.
 5.  **Commit your changes** using a descriptive commit message (see [Commit Message Style](#commit-message-style)).
 6.  **Push your branch** to your fork.
 7.  **Open a pull request** to the `main` branch of the original repository. Provide a clear description of the changes you have made.

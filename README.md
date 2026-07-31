@@ -100,8 +100,8 @@ print(f"Result of final node 'C': {history[last_node]}")
 print(f"History of all node outputs: {history}")
 
 # 5. Visualize the pipeline
-# This creates a .dot file and a .png image of the graph
-pipeline.to_dot("basic.dot", generate_png=True)
+# This creates a Graphviz .dot file without requiring Graphviz to be installed
+pipeline.to_dot("basic.dot")
 ```
 
 This script will output:
@@ -112,7 +112,7 @@ Result of final node 'C': 81
 History of all node outputs: {'A': 8, 'B': 80, 'C': 81}
 ```
 
-And it will generate an image (`basic.png`) of your pipeline's structure, taken from the `basic.ipynb` example:
+A rendered version of the pipeline from `basic.ipynb` is shown below:
 
 <div align="center">
   <img src="https://github.com/centralelyon/pipeoptz/blob/main/examples/basic/basic.png?raw=true" alt="Simple Pipeline Graph" width="120"/>
@@ -164,6 +164,7 @@ Available hooks are `on_optimization_begin`, `on_optimization_end`,
 `on_evaluation_end`. Iteration and evaluation indexes are zero-based.
 
 ## Examples
+
 Several example pipelines are provided in the `examples/` directory. These include:
 -   `basic/`: A simple pipeline with arithmetic operations.
 -   `callback/`: Standalone completion and step-by-step optimization callbacks.
@@ -171,6 +172,12 @@ Several example pipelines are provided in the `examples/` directory. These inclu
 -   `for/`: A pipeline demonstrating for loops.
 -   `while/`: A pipeline demonstrating while loops.
 -   `opti/`: A pipeline demonstrating optimization with tunable parameters.
+
+### Setup for examples
+
+You may install additionnal dependencies included in `requirements-examples.txt` You may also install the system-level Graphviz package:
+
+> sudo apt-get update && sudo apt-get install -y graphviz
 
 ## Docker
 
@@ -226,10 +233,13 @@ mkdocs build --strict
 ```
 
 ## Testing
-PipeOptz makes use of pytest for its test suite.
-```
-pip install pytest
-pytest
+
+PipeOptz uses pytest. From the project root, install the development dependencies
+and run the `tests/` directory explicitly:
+
+```bash
+pip install --editable ".[dev]"
+python -m pytest tests
 ```
 
 ## Contributing
